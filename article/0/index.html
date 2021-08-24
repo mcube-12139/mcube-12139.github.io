@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>弹幕互动游戏开发心得（半教程）</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #page {
+            padding: 0 100px;
+            width: 660px;
+            margin: 30px auto 0 auto;
+            overflow-x: initial;
+            max-width: 860px;
+        }
+
+        #title-box {
+            padding-top: 42px;
+            margin-top: 0;
+            line-height: 1.4;
+        }
+
+        #title {
+            font-size: 28px;
+            color: #222;
+            margin-bottom: 14px;
+            font-weight: 700;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        #article {
+            margin-top: 30px;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #222;
+            padding-bottom: 50px;
+            max-width: 660px;
+            padding-left: 0;
+            padding-right: 0;
+            word-wrap: break-word;
+            overflow-x: hidden;
+            font-weight: 400;
+        }
+        
+        .font-size-16 {
+            font-size: 16px;
+        }
+
+        .font-size-23 {
+            font-size: 23px;
+        }
+
+        blockquote {
+            margin: 0;
+            padding: 0 0 0 25px;
+            position: relative;
+            color: #6d757a;
+        }
+
+        blockquote::before {
+            content: "";
+            width: 20px;
+            height: 19px;
+            position: absolute;
+            left: 0;
+            background-image: url("blockquote.png");
+            background-size: 100% 100%;
+        }
+
+        .code-box {
+            margin: 0 0 20px 0;
+            padding: 0;
+        }
+
+        pre {
+            background: #f5f2f0;
+            padding: 1em;
+            margin: 0.5em 0;
+            overflow: auto;
+        }
+
+        code {
+            color: #000;
+            font-family: Consolas;
+            font-size: 1em;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+            white-space: pre;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="page">
+        <div id="title-box">
+            <div id="title">弹幕互动游戏开发心得（半教程）</div>
+        </div>
+        <div id="article">
+            <p>保护环境从我做起，大家好，我是魔方。</p>
+            <p>这篇文章是我在弹幕互动游戏开发过程中的心得和感想记录，有一些教学内容，不能确保高可靠性，请读者朋友们谨慎参考。</p>
+            <p>所谓的弹幕互动游戏，即是指在直播时，观众可以用弹幕参与游戏内容互动的游戏。常规游戏的操作者只有玩家，而弹幕互动游戏的操作者还有愿意参与的观众。</p>
+            <p>毫无疑问，弹幕互动游戏的技术基础和核心是弹幕消息的获取和处理。通常情况下，看弹幕的都是观众（主播如果看自己那他也是观众），且弹幕消息都显示在网页或者手机应用界面上，和游戏程序无关。不过，借助某些技术，可以用自己的程序获取并处理弹幕，从而实现弹幕互动游戏。
+            </p>
+            <p>
+                <span class="font-size-23">WebSocket</span><br>
+            </p>
+            <p>
+                <span>以下内容摘自RUNOOB：</span><br>
+            </p>
+            <blockquote>
+                <p><br></p>
+                <p>WebSocket 是 HTML5 开始提供的一种在单个 TCP 连接上进行全双工通讯的协议。</p>
+                <p>WebSocket 使得客户端和服务器之间的数据交换变得更加简单，允许服务端主动向客户端推送数据。在 WebSocket API 中，浏览器和服务器只需要完成一次握手，两者之间就直接可以创建持久性的连接，并进行双向数据传输。</p>
+                <p>在 WebSocket API 中，浏览器和服务器只需要做一个握手的动作，然后，浏览器和服务器之间就形成了一条快速通道。两者之间就直接可以数据互相传送。</p>
+                <p>HTML5 定义的 WebSocket 协议，能更好的节省服务器资源和带宽，并且能够更实时地进行通讯。</p>
+            </blockquote>
+            <p>
+                <span>简单来说WebSocket就是一个【服务器可以往我这儿发东西的通道】。</span>
+            </p>
+            <p>
+                <span>B站直播的弹幕信息就是通过WebSocket进行传输的。知道了这一点，只需要用一个WebSocket和B站发送信息的地方建立连接，就能收到发来的弹幕信息，然后用其他程序进行处理了。</span>
+            </p>
+            <p>
+                <span>HTML5提供了这个协议，那就用HTML+JavaScript编一段程序来看看。</span>
+            </p>
+            <p>
+                <span>创建index.html文件，用文本编辑程序打开，输入如下内容：</span>
+            </p>
+            <figure class="code-box" contenteditable="false">
+                <pre data-lang="text/html@html@HTML"><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;/head&gt;
+
+&lt;body&gt;
+    &lt;script&gt;
+        function utf8ToBytes(str) {
+            const bytes = [];
+            for (const c of str) {
+                if (c &gt;= 0x010000 &amp;&amp; c &lt;= 0x10FFFF) {
+                    bytes.push(((c &gt;&gt; 18) &amp; 0x07) | 0xF0);
+                    bytes.push(((c &gt;&gt; 12) &amp; 0x3F) | 0x80);
+                    bytes.push(((c &gt;&gt; 6) &amp; 0x3F) | 0x80);
+                    bytes.push((c &amp; 0x3F) | 0x80);
+                } else if (c &gt;= 0x000800 &amp;&amp; c &lt;= 0x00FFFF) {
+                    bytes.push(((c &gt;&gt; 12) &amp; 0x0F) | 0xE0);
+                    bytes.push(((c &gt;&gt; 6) &amp; 0x3F) | 0x80);
+                    bytes.push((c &amp; 0x3F) | 0x80);
+                } else if (c &gt;= 0x000080 &amp;&amp; c &lt;= 0x0007FF) {
+                    bytes.push(((c &gt;&gt; 6) &amp; 0x1F) | 0xC0);
+                    bytes.push((c &amp; 0x3F) | 0x80);
+                } else {
+                    bytes.push(c &amp; 0xFF);
+                }
+            }
+            return bytes;
+        }
+
+        function bytesToUtf8(bytes) {
+            if (typeof bytes === &quot;string&quot;) {
+                return bytes;
+            }
+            let str = &quot;&quot;;
+            
+            for (let [i, val] of bytes.entries()) {
+                let one = val.toString(2);
+                let v = one.match(/^1+?(?=0)/);
+                if (v &amp;&amp; one.length == 8) {
+                    let bytesLength = v[0].length;
+                    let store = val.toString(2).slice(7 - bytesLength);
+                    for (let st = 1; st &lt; bytesLength; st++) {
+                        store += bytes[st + i].toString(2).slice(2);
+                    }
+                    str += String.fromCharCode(parseInt(store, 2));
+                    i += bytesLength - 1;
+                } else {
+                    str += String.fromCharCode(val);
+                }
+            }
+            return str;
+        }
+
+        const roomId = 22908468;
+        const ws = new WebSocket(&quot;wss://broadcastlv.chat.bilibili.com:2245/sub&quot;);
+        ws.onopen = e =&gt; {
+            console.log(&quot;open&quot;);
+
+            const data = {
+                &quot;uid&quot;: 0,
+                &quot;roomid&quot;: roomId,
+                &quot;protover&quot;: 1,
+                &quot;platform&quot;: &quot;web&quot;,
+                &quot;clientver&quot;: &quot;1.4.0&quot;
+            };
+            const body = utf8ToBytes(JSON.stringify(data));
+            const bodyLen = body.length;
+            const headLen = 16;
+
+            const header = [0, 0, 0, headLen + bodyLen, 0, headLen, 0, 1, 0, 0, 0, 7, 0, 0, 0, 1];
+            const sendTxt = header.concat(body);
+            ws.send(bytesToUtf8(sendTxt));
+
+            const heartMsg = [0, 0, 0, 18, 0, headLen, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 123, 125];
+            const heartInterval = setInterval(() =&gt; {
+                ws.send(bytesToUtf8(heartMsg));
+            }, 30000);
+        };
+        ws.onmessage = e =&gt; {
+            console.log(&#x60;message: ${bytesToUtf8(new Uint8Array(e.data))}&#x60;);
+        };
+        ws.binaryType = &quot;arraybuffer&quot;;
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+            </figure>
+
+        </div>
+    </div>
+</body>
+
+</html>
