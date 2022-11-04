@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>I Wanna Map Maker</title>
+        <style>
+            body {
+                font-size: 0;
+                margin: 0px 0px 0px 0px;
+            }
+            #tool {
+                font-size: 16px;
+                vertical-align: top;
+                display: inline-block;
+                background-color: antiquewhite;
+            }
+            ol {
+                margin: 0 0 0 0;
+                padding: 0 0 0 0;
+            }
+            ul {
+                margin: 0 0 0 0;
+                padding: 0 0 0 0;
+            }
+            input {
+                margin: 0 0 0 0;
+                padding: 0 0 0 0;
+            }
+            li {
+                list-style-type: none;
+            }
+            input[type="text"] {
+                width: 48px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="tool">
+            物体：<br/>
+            <select id="classSelect"></select><br/>
+            <br/>
+            图层：<br/>
+            <button onclick="Layer.showAll()">全显示</button><button onclick="Layer.hideAll()">全隐藏</button><br/>
+            <button onclick="Layer.unlockAll()">全解锁</button><button onclick="Layer.lockAll()">全锁定</button><br/>
+            <ol id="layerOL"></ol>
+            <br/>
+            网格：<br/>
+            <button onclick="setGridSize(32)">32</button><button onclick="setGridSize(16)">16</button><button onclick="setGridSize(8)">8</button><button onclick="setGridSize(4)">4</button><br/>
+            宽度<input id="gridWidthInput" type="text" value="32" onchange="setGridWidth(parseInt(this.value))"/><br/>
+            高度<input id="gridHeightInput" type="text" value="32" onchange="setGridHeight(parseInt(this.value))"/><br/>
+            颜色<input id="gridHeightInput" type="text" value="#ffffff" onchange="setGridColor(this.value)"/><br/>
+            <br/>
+            属性：<br/>
+            <ul id="propertiesUL"></ul>
+            <br/>
+            结果：<br/>
+            <textarea id="exportedTextArea"></textarea><br/>
+            <button onclick="saveRoom()">保存</button><button onclick="loadRoom()">打开</button><br/>
+            <button onclick="exportRoom()">导出</button>
+        </div>
+        <canvas id="mainCanvas" width="800" height="608"></canvas>
+        <script src="maker.js"></script>
+    </body>
+</html>
