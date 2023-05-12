@@ -1,0 +1,21 @@
+<html>
+    <head>
+        <title>番符数对应分数计算器</title>
+        <style>
+            input[type="text"] {
+                width: 48px;
+            }
+        </style>
+    </head>
+    <body>
+        <input id="otherZimoInput" type="radio" name="whoZimoOrRonInput">闲家自摸</input>
+        <input id="otherRonInput" type="radio" name="whoZimoOrRonInput">闲家荣和</input>
+        <input id="eastZimoInput" type="radio" name="whoZimoOrRonInput">庄家自摸</input>
+        <input id="eastRonInput" type="radio" name="whoZimoOrRonInput">庄家荣和</input><br/>
+        <input id="fanInput" type="text" />番<input id="fuInput" type="text" />符 = <span id="pointSpan"></span><br/>
+        <button onclick="letsGo()">计算</button>
+        <div id="payMessageDiv"></div>
+        <div id="pointNameDiv"></div>
+        <script src="main.js"></script>
+    </body>
+</html>
