@@ -44,7 +44,6 @@ format.addEventListener("click", e => {
     const reader = new StringStreamReader(inputText);
     const result = [];
 
-    reader.readLine();
     for ( ; ; ) {
         const line = reader.readLine();
         if (reader.isEnd()) {
