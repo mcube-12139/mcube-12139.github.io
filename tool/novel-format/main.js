@@ -32,6 +32,7 @@ class StringStreamReader {
     }
 }
 
+const roleName = document.getElementById("roleName");
 /**
  * @type {HTMLTextAreaElement}
  */
@@ -40,6 +41,7 @@ const format = document.getElementById("format");
 const output = document.getElementById("output");
 
 format.addEventListener("click", e => {
+    const roleNameStr = roleName.value;
     const inputText = input.value;
     const reader = new StringStreamReader(inputText);
     const result = [];
@@ -49,7 +51,7 @@ format.addEventListener("click", e => {
         if (reader.isEnd()) {
             break;
         }
-        if (line.startsWith("三九 魔:")) {
+        if (line.startsWith("三九 魔")) {
             result.push("我:");
             for ( ; ; ) {
                 const myContent = reader.readLine();
@@ -58,8 +60,8 @@ format.addEventListener("click", e => {
                     break;
                 }
             }
-        } else if (line.startsWith("NovelGPT:")) {
-            result.push("雯雯:");
+        } else if (line.startsWith("NovelGPT")) {
+            result.push(`${roleNameStr}:`);
             reader.readLine();
             reader.readLine();
             for ( ; ; ) {
@@ -77,4 +79,18 @@ format.addEventListener("click", e => {
     }
 
     output.value = result.join("\n");
+});
+
+window.addEventListener("load", e => {
+    const roleNameStr = localStorage.getItem("roleName");
+    if (roleNameStr !== null) {
+        roleName.value = roleNameStr;
+    }
+});
+
+window.addEventListener("beforeunload", e => {
+    const roleNameStr = roleName.value;
+    if (roleNameStr !== "") {
+        localStorage.setItem("roleName", roleNameStr);
+    }
 });
