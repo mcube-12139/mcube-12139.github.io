@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>汉兜作弊器</title>
+        <style>
+            input {
+                min-width: 300px
+            }
+            textarea {
+                min-width: 300px;
+                min-height: 600px;
+                font-family: '微软雅黑';
+            }
+        </style>
+    </head>
+    <body>
+        <p>格式如 !w.u.3!五 !g!uang!1!光 !sh.i.2!十 !s!e.4!色，数字表示音调</p>
+        <p>! 不存在 . 存在 = 正确</p>
+        条件:<br>
+        <input id="filter"><br>
+        <button id="executeFilter">过滤</button><br>
+        结果:<br>
+        <textarea id="result"></textarea>
+        <script src="words.js"></script>
+        <script src="https://unpkg.com/pinyin-pro"></script>
+        <script src="main.js"></script>
+    </body>
+</html>
