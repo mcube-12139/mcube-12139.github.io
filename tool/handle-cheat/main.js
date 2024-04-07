@@ -15,12 +15,12 @@ for (const word of words) {
         } else {
             const p = pinyinPro.pinyin(ch, {
                 type: "all",
-                toneType: "none",
+                toneType: "num",
                 multiple: true
             });
             pinyin = p.map(v => ({
                 initial: v.initial,
-                final: v.final,
+                final: v.final.substring(0, v.final.length - v.num.toString().length),
                 num: v.num.toString(),
                 char: ch
             }));
