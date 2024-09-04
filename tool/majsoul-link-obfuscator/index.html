@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>雀魂牌谱链接混淆器</title>
+    </head>
+    <body>
+        链接：<input id="link" /><br>
+        结果：<span id="result"></span><br>
+        <button id="obfuscate">混淆</button>
+        <script>
+            const link = document.getElementById("link");
+            const result = document.getElementById("result");
+            const obfuscate = document.getElementById("obfuscate");
+
+            obfuscate.onclick = _ => {
+                let input = link.value;
+
+                if (input.startsWith("https://")) {
+                    input = input.substring(8);
+
+                    const arr = [2, 10, 17, 21, 26, 43, 57, 74, input.length];
+                    const resultArr = [];
+                    let start = 0;
+                    for (const index of arr) {
+                        if (index > input.length) {
+                            return;
+                        }
+
+                        resultArr.push(input.substring(start, index));
+                        if (index !== input.length) {
+                            resultArr.push("😡");
+                            start = index;
+                        }
+                    }
+                    result.textContent = resultArr.join("");
+                }
+            };
+        </script>
+    </body>
+</html>
