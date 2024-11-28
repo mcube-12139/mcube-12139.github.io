@@ -2,15 +2,23 @@
 <html>
     <head>
         <title>雀魂牌谱链接混淆器</title>
+        <style>
+            span {
+                white-space: pre;
+            }
+        </style>
     </head>
     <body>
         链接：<input id="link" /><br>
-        结果：<span id="result"></span><br>
+        结果：<br>
+        <span id="result"></span><br>
         <button id="obfuscate">混淆</button>
+        <button id="copy">复制</button>
         <script>
             const link = document.getElementById("link");
             const result = document.getElementById("result");
             const obfuscate = document.getElementById("obfuscate");
+            const copy = document.getElementById("copy");
 
             obfuscate.onclick = _ => {
                 let input = link.value;
@@ -32,8 +40,18 @@
                             start = index;
                         }
                     }
-                    result.textContent = resultArr.join("");
+                    const text = 
+`@暗夜的君王46 
+今日已完成对局：${resultArr.join("")}
+请在20:00前预测并发布结果密文。`;
+
+                    result.textContent = text;
+                    navigator.clipboard.writeText(text);
                 }
+            };
+
+            copy.onclick = _ => {
+                navigator.clipboard.writeText(result.textContent);
             };
         </script>
     </body>
