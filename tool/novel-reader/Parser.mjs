@@ -2,6 +2,8 @@ export class Parser {
     constructor(source) {
         this.source = source;
         this.i = -1;
+        this.content = "";
+        this.contentIndex = -1;
     }
 
     next() {
@@ -29,16 +31,37 @@ export class Parser {
         return null;
     }
 
+    nextContent() {
+        ++this.contentIndex;
+        if (this.contentIndex < this.content.length) {
+            return this.content[this.contentIndex];
+        }
+
+        return null;
+    }
+
+    lookNextContent() {
+        if (this.contentIndex < this.content.length - 1) {
+            return this.content[this.contentIndex + 1];
+        }
+
+        return null;
+    }
+
     matchString(str) {
+        if (str === null) {
+            return this.lookNextContent() === null;
+        }
+
         for (let i = 0, size = str.length; i !== size; ++i) {
             const c = str[i];
-            const c1 = this.i + i < this.source.length ? this.source[this.i + i] : null;
+            const c1 = this.contentIndex + i < this.content.length ? this.content[this.contentIndex + i] : null;
             if (c !== c1) {
                 return false;
             }
         }
 
-        this.i += str.length - 1;
+        this.contentIndex += str.length - 1;
         return true;
     }
 
@@ -47,9 +70,15 @@ export class Parser {
 
         let text = "";
         for (;;) {
-            const c = this.next();
+            const c = this.nextContent();
+
             if (c === null) {
-                throw new Error(`${endStrs} not found`);
+                if (this.matchString(null)) {
+                    if (text.length !== 0) {
+                        elements.push(text);
+                    }
+                    return [elements, null];
+                }
             }
 
             for (const str of endStrs) {
@@ -71,20 +100,32 @@ export class Parser {
             if (c === "\"") {
                 const span = document.createElement("span");
                 span.className = "quoted";
-                span.append(this.parseContent("\"")[0]);
+                const content = this.parseContent("\"");
+                for (const element of content[0]) {
+                    span.append(element);
+                }
                 elements.push(span);
             } else if (c === "“") {
                 const span = document.createElement("span");
                 span.className = "quoted";
-                span.append(this.parseContent("”")[0]);
+                const content = this.parseContent("”");
+                for (const element of content[0]) {
+                    span.append(element);
+                }
                 elements.push(span);
             } else if (this.matchString("**")) {
                 const strong = document.createElement("strong");
-                strong.append(this.parseContent("**")[0]);
+                const content = this.parseContent("**");
+                for (const element of content[0]) {
+                    strong.append(element);
+                }
                 elements.push(strong);
             } else if (c === "*") {
                 const em = document.createElement("em");
-                em.append(this.parseContent("*")[0]);
+                const content = this.parseContent("*");
+                for (const element of content[0]) {
+                    em.append(element);
+                }
                 elements.push(em);
             } else if (c === "\n") {
                 const br = document.createElement("br");
@@ -95,21 +136,45 @@ export class Parser {
         }
     }
 
+    readLine() {
+        let line = "";
+        for (;;) {
+            const c = this.lookNext();
+            if (c === "\n") {
+                this.next();
+                break;
+            } else if (c === null) {
+                line = null;
+                break;
+            } else {
+                line += c;
+                this.next();
+            }
+        }
+
+        return line;
+    }
+
     parse() {
         const chats = [];
         this.i = -1;
 
-        while (this.lookNext() !== null) {
-            // 名字
-            let name = "";
-            let c;
-            do {
-                c = this.next();
-                name += c;
-            } while (c !== ":");
+        // 跳过第一行
+        this.readLine();
 
-            // 内容
-            const [elements, endStr] = this.parseContent("<StatusBlock>", "\n\n");
+        for (let fuck = 0; fuck !== 9999; ++fuck) {
+            const lineStr = this.readLine();
+            if (lineStr === null) {
+                break;
+            }
+
+            const line = JSON.parse(lineStr);
+
+            const name = line.name;
+
+            this.content = line.is_user ? line.mes : (line.swipes !== undefined ? line.swipes[line.swipe_id] : line.mes);
+            this.contentIndex = -1;
+            const [elements, endStr] = this.parseContent("<StatusBlock>");
 
             let status = null;
             if (endStr === "<StatusBlock>") {
