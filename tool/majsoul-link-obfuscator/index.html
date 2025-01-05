@@ -20,31 +20,64 @@
             const obfuscate = document.getElementById("obfuscate");
             const copy = document.getElementById("copy");
 
+            function encode(str) {
+                let value = str;
+                // 对齐到 5 的倍数
+                const modValue = (8 * value.length) % 5;
+                if (modValue === 1) {
+                    value += "\"\"\"";
+                } else if (modValue === 2) {
+                    value += "\"";
+                } else if (modValue === 3) {
+                    value += "\"\"\"\"";
+                } else if (modValue === 4) {
+                    value += "\"\"";
+                }
+
+                const bits = new Array(40);
+                let result = "";
+                for (let i = 0; i !== value.length; i += 5) {
+                    // 每 5 个字符转换成 8 个密文字符
+                    let bitIndex = 0;
+                    for (let j = i; j !== i + 5; ++j) {
+                        const ch = value.charCodeAt(j);
+                        bits[bitIndex] = ch & 1;
+                        bits[bitIndex + 1] = (ch & 2) >> 1;
+                        bits[bitIndex + 2] = (ch & 4) >> 2;
+                        bits[bitIndex + 3] = (ch & 8) >> 3;
+                        bits[bitIndex + 4] = (ch & 16) >> 4;
+                        bits[bitIndex + 5] = (ch & 32) >> 5;
+                        bits[bitIndex + 6] = (ch & 64) >> 6;
+                        bits[bitIndex + 7] = (ch & 128) >> 7;
+
+                        bitIndex += 8;
+                    }
+
+                    bitIndex = 0;
+                    for (let j = 0; j !== 8; ++j) {
+                        const charCode =
+                            bits[bitIndex] |
+                            (bits[bitIndex + 1] << 1) |
+                            (bits[bitIndex + 2] << 2) |
+                            (bits[bitIndex + 3] << 3) |
+                            (bits[bitIndex + 4] << 4);
+
+                        result += String.fromCodePoint(0x1f000 + charCode);
+                        bitIndex += 5;
+                    }
+                }
+
+                return result;
+            }
+
             obfuscate.onclick = _ => {
                 let input = link.value;
 
                 if (input.startsWith("https://")) {
-                    input = input.substring(8);
-
-                    const arr = [2, 10, 17, 21, 26, 43, 57, 74, input.length];
-                    const resultArr = [];
-                    let start = 0;
-                    for (const index of arr) {
-                        if (index > input.length) {
-                            return;
-                        }
-
-                        resultArr.push(input.substring(start, index));
-                        if (index !== input.length) {
-                            resultArr.push("😡");
-                            start = index;
-                        }
-                    }
-                    const text = 
+                    const text =
 `@暗夜的君王46 
-今日已完成对局：${resultArr.join("")}
+今日已完成对局：${encode(input)}
 请在20:00前预测并发布结果密文。`;
-
                     result.textContent = text;
                     navigator.clipboard.writeText(text);
                 }
