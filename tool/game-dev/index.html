@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Dev</title>
+    <link rel="stylesheet" href="main.css">
+</head>
+<body>
+    <div id="pageContainer">
+        <div id="page" class="page">
+            <div class="verticalLayout block">
+                <div class="container">节点树</div>
+                <div id="nodeTreeContainer" class="container">
+                    <ol id="nodeTree"></ol>
+                </div>
+            </div>
+            <div class="verticalLayout grow">
+                <div id="toolbar" class="verticalLayout container block">
+                    <div class="horizontalLayout">
+                        工具
+                        <input id="nodeEditToolCreate" type="radio" name="nodeTool" checked="true">创建
+                        <input id="nodeEditToolDelete" type="radio" name="nodeTool">删除
+                        <input id="nodeEditToolSelect" type="radio" name="nodeTool">选择
+                        <input id="nodeEditToolSelectRegion" type="radio" name="nodeTool">框选
+                    </div>
+                    <div class="horizontalLayout">
+                        网格
+                        <input id="gridVisible" type="checkbox" checked="true">显示
+                        <input id="gridSnap" type="checkbox" checked="true">吸附
+                        宽度<input id="gridWidth" type="number" class="shortInput" value="32">
+                        高度<input id="gridHeight" type="number" class="shortInput" value="32">
+                        <button id="gridSize32">32</button>
+                        <button id="gridSize16">16</button>
+                        <button id="gridSize8">8</button>
+                        <button id="gridSize4">4</button>
+                    </div>
+                    <div class="horizontalLayout">
+                        选项
+                        <input type="checkbox" id="overlapEnabled">重叠
+                        <input type="checkbox" id="penetrateEnabled">穿透
+                        <input type="checkbox" id="multiselectEnabled">多选
+                    </div>
+                    <div class="horizontalLayout">
+                        操作
+                        <button>保存</button>
+                        <button>撤销</button>
+                        <button>重做</button>
+                        <button>剪切</button>
+                        <button>复制</button>
+                        <button>粘贴</button>
+                    </div>
+                </div>
+                <div id="scene" class="scene grow">
+                    <div id="nodeContainer"></div>
+                    <canvas id="grid" class="gridCanvas"></canvas>
+                </div>
+            </div>
+            <div class="verticalLayout block">
+                <div class="container">检查器</div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="main.mjs"></script>
+</body>
+</html>

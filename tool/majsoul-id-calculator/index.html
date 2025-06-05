@@ -1,12 +1,60 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>雀魂id计算器</title>
-    </head>
-    <body>
-        牌谱屋id: <input id="paipuHouseId" type="number"><br>
-        雀魂id: <span id="majsoulId"></span><br>
-        <button id="execute">计算</button>
-        <script src="main.js"></script>
-    </body>
+<head>
+    <title>雀魂ID计算器</title>
+    <link rel="stylesheet" type="text/css" href="../../base.css" />
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+        }
+
+        input[type="number"] {
+            width: 100%;
+        }
+
+        button {
+            width: 100%;
+        }
+
+        .seperator {
+            height: 1px;
+            background-color: #eee;
+        }
+
+        .result {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <label for="paipuHouseId">牌谱屋ID</label>
+        <input id="paipuHouseId" type="number" placeholder="请输入牌谱屋ID">
+        <button id="execute">立即计算</button>
+        <div class="seperator"></div>
+        <div class="result">
+            雀魂ID: <span id="majsoulId">-</span>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
 </html>

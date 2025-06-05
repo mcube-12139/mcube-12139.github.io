@@ -2,21 +2,76 @@
 <html>
 <head>
     <title>魔方12139的Github空间</title>
+    <link rel="stylesheet" type="text/css" href="base.css" />
+    <style>
+        body {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .card ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
 </head>
 <body>
-    <h1>游戏</h1>
-    <a href="game/i-wanna-super-ability/index.html">I Wanna Super Ability</a>
-    <a href="game/i-wanna-pursue-my-dream/index.html">I Wanna Pursue My Dream</a>
-    <a href="game/i-wanna-mobile/index.html">I Wanna Mobile</a>
-    <a href="game/not another needle game/index.html">Not Another Needle Game</a>
-    <h1>工具</h1>
-    <a href="tool/jinjiang-novel-title-generator/index.html">晋江小说标题生成器</a>
-    <a href="tool/point-calculator/index.html">番符数对应分数计算器</a>
-    <a href="tool/novel-format/index.html">Novel 格式化工具</a>
-    <a href="tool/handle-cheat/index.html">汉兜作弊器</a>
-    <a href="tool/majsoul-id-calculator/index.html">雀魂id计算器</a>
-    <a href="tool/majsoul-link-obfuscator/index.html">雀魂牌谱链接混淆器</a>
-    <a href="tool/novel-reader/index.html">读书</a>
-    <a href="tool/mahjong-encode/index.html">麻将加密</a>
+    <h1>魔方12139的Github空间</h1>
+    <div class="container">
+        <div class="card">
+            <h2>游戏</h2>
+            <ul>
+                <li>
+                    <a href="game/i-wanna-super-ability/index.html">I Wanna Super Ability</a>
+                </li>
+                <li>
+                    <a href="game/i-wanna-pursue-my-dream/index.html">I Wanna Pursue My Dream</a>
+                </li>
+                <li>
+                    <a href="game/i-wanna-mobile/index.html">I Wanna Mobile</a>
+                </li>
+                <li>
+                    <a href="game/not another needle game/index.html">Not Another Needle Game</a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="card">
+            <h2>工具</h2>
+            <ul>
+                <li>
+                    <a href="tool/jinjiang-novel-title-generator/index.html">晋江小说标题生成器</a>
+                </li>
+                <li>
+                    <a href="tool/point-calculator/index.html">番符数对应分数计算器</a>
+                </li>
+                <li>
+                    <a href="tool/handle-cheat/index.html">汉兜作弊器</a>
+                </li>
+                <li>
+                    <a href="tool/majsoul-id-calculator/index.html">雀魂id计算器</a>
+                </li>
+                <li>
+                    <a href="tool/novel-reader/index.html">读书</a>
+                </li>
+                <li>
+                    <a href="tool/mahjong-encode/index.html">麻将加密</a>
+                </li>
+            </ul>
+        </div>
+    </div>
 </body>
 </html>
