@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雀魂月报生成器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            margin-bottom: 5px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            display: block;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>雀魂月报生成器</h1>
+    <div class="form-group">
+        <label for="user-name">玩家名</label>
+        <input id="user-name" placeholder="请输入玩家名" type="text">
+    </div>
+    <div class="form-group">
+        <label for="game-records">对局记录</label>
+        <div>F12-Network，打开雀魂牌谱屋网站，查询玩家记录，查找"player_records"请求，复制"Response"栏文本。</div>
+        <textarea id="game-records" placeholder="请输入对局记录"></textarea>
+    </div>
+    <div class="form-group">
+        <label>选择月份</label>
+        <div>
+            <input type="radio" id="current-month" name="time-range" value="current-month" checked>
+            <label for="current-month">本月</label>
+        </div>
+        <div>
+            <input type="radio" id="specific-month" name="time-range" value="specific-month">
+            <label for="specific-month">指定月</label>
+            <select id="month-selector" disabled>
+                <option value="1">1月</option>
+                <option value="2">2月</option>
+                <option value="3">3月</option>
+                <option value="4">4月</option>
+                <option value="5">5月</option>
+                <option value="6">6月</option>
+                <option value="7">7月</option>
+                <option value="8">8月</option>
+                <option value="9">9月</option>
+                <option value="10">10月</option>
+                <option value="11">11月</option>
+                <option value="12">12月</option>
+            </select>
+        </div>
+    </div>
+    <button id="generate-button">生成</button>
+    <canvas id="report-canvas" width="1650" height="1300"></canvas>
+
+    <script>
+        const userNameInput = document.getElementById('user-name');
+        const specificMonthRadio = document.getElementById('specific-month');
+        const monthSelector = document.getElementById('month-selector');
+        const gameRecordsText = document.getElementById('game-records');
+        const generateButton = document.getElementById('generate-button');
+        const reportCanvas = document.getElementById('report-canvas');
+
+        specificMonthRadio.addEventListener('change', () => {
+            monthSelector.disabled = !specificMonthRadio.checked;
+        });
+
+        document.getElementById('current-month').addEventListener('change', () => {
+            monthSelector.disabled = true;
+        });
+
+        function calculateScores(userName, gameRecords) {
+            const scores = [];
+
+            for (let i = gameRecords.length - 1; i >= 0; i--) {
+                const record = gameRecords[i];
+                const player = record.players.find(p => p.nickname === userName);
+                const base = scores.length !== 0 ? scores[scores.length - 1] : 0;
+                scores.push(base + player.gradingScore);
+            }
+
+            return scores;
+        }
+
+        function toRankInt(value) {
+            const base = 10 ** Math.floor(Math.log10(value));
+            return Math.ceil(value / base) * base;
+        }
+
+        function drawReport(userName, reportData, selectedMonth) {
+            const ctx = reportCanvas.getContext('2d');
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, reportCanvas.width, reportCanvas.height);
+
+            const max = Math.max(...reportData);
+            const min = Math.min(...reportData);
+            const diff = (max - min) / 10;
+            const intDiff = toRankInt(diff);
+            const intMax = intDiff * Math.ceil(max / intDiff);
+            const intMin = intDiff * Math.floor(min / intDiff);
+
+            const horDiff = (reportData.length - 1) / 15;
+            const horIntDiff = Math.ceil(horDiff);
+
+            const title = `${new Date().getFullYear()}.${selectedMonth} 月报 - ${userName}`;
+
+            ctx.font = "24px 微软雅黑";
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+            const vertCellCount = (intMax - intMin) / intDiff;
+            const vertCellSize = 1000 / vertCellCount;
+
+            for (let i = 0; i !== vertCellCount + 1; ++i) {
+                const y = Math.round(1150 - i * vertCellSize);
+                ctx.fillStyle = "#404040";
+                ctx.fillRect(90, y, 1500, 1);
+                ctx.fillStyle = "#000000";
+                ctx.fillText((intMin + i * intDiff).toString(), 80, y);
+            }
+
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            const horCellCount = Math.ceil(reportData.length / horIntDiff);
+            const horCellSize = 1500 / horCellCount;
+            for (let i = 0; i !== horCellCount; ++i) {
+                ctx.fillText((1 + horIntDiff * i).toString(), 90 + horCellSize * i, 1160);
+            }
+            if ((reportData.length - 1) % horIntDiff !== 0) {
+                ctx.fillText(reportData.length.toString(), 90 + horCellSize * ((reportData.length - 1) / horIntDiff), 1160);
+            }
+
+            ctx.beginPath();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#0066ff";
+            for (let i = 0; i !== reportData.length; ++i) {
+                const x = 90 + horCellSize * (i / horIntDiff);
+                const y = 1150 - (reportData[i] - intMin) / intDiff * vertCellSize;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            ctx.font = "48px 微软雅黑";
+            ctx.fillText(title, 800, 50);
+
+            ctx.fillStyle = "#0066ff";
+            ctx.fillRect(760, 1250, 40, 2);
+
+            ctx.fillStyle = "#000000";
+            ctx.font = "24px 微软雅黑";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText("分数", 800, 1250);
+        }
+
+        generateButton.addEventListener('click', () => {
+            const userName = userNameInput.value.trim();
+            const gameRecords = JSON.parse(gameRecordsText.value.trim());
+            const selectedMonth = specificMonthRadio.checked ? monthSelector.value : new Date().getMonth() + 1;
+
+            if (!userName || !gameRecords) {
+                alert('请填写玩家名和对局记录');
+                return;
+            }
+
+            const reportData = calculateScores(userName, gameRecords);
+            drawReport(userName, reportData, selectedMonth);
+        });
+    </script>
+</body>
+</html>
