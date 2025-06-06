@@ -2,7 +2,9 @@ import { NodeEditToolCreate } from "./NodeEditToolCreate.mjs";
 import { NodeEditToolDelete } from "./NodeEditToolDelete.mjs";
 import { NodeEditToolSelect } from "./NodeEditToolSelect.mjs";
 import { NodeEditToolSelectRegion } from "./NodeEditToolSelectRegion.mjs";
-import { Vec2 } from "./Vec2.mjs";
+import { NodeTreeItem } from "./NodeTreeItem.mjs";
+import { SharkUid } from "./SharkUid.mjs";
+import { Vec2 } from "./math/Vec2.mjs";
 
 const pageElement = document.querySelector("#page");
 const nodeTree = document.querySelector("#nodeTree");
@@ -19,18 +21,28 @@ const gridSize16 = document.querySelector("#gridSize16");
 const gridSize8 = document.querySelector("#gridSize8");
 const gridSize4 = document.querySelector("#gridSize4");
 const scene = document.querySelector("#scene");
-const grid = document.querySelector("#grid");
 const nodeContainer = document.querySelector("#nodeContainer");
+const nodeShadow = document.querySelector("#nodeShadow");
+const grid = document.querySelector("#grid");
+const interactor = document.querySelector("#interactor");
+
+const rootElement = document.createElement("div");
+nodeContainer.appendChild(rootElement);
 
 const root = {
     id: "b6e1140f89b67245fb03f25c1d4132a7",
-    parentId: null,
+    parent: undefined,
+    children: [],
+    components: [
+        {
+            id: "0eebb34ffeec15d19b4661d4c4642a45",
+            position: new Vec2(0, 0)
+        }
+    ],
+    element: rootElement,
+    treeItem: new NodeTreeItem("root")
 };
-const rootTransform = {
-    id: "0eebb34ffeec15d19b4661d4c4642a45",
-    nodeId: root.id,
-    position: new Vec2(0, 0)
-};
+nodeTree.appendChild(root.treeItem.element);
 
 const page = {
     element: pageElement,
@@ -38,8 +50,10 @@ const page = {
     scene: scene,
     gridWidthElement: gridWidth,
     gridHeightElement: gridHeight,
-    grid: grid,
     nodeContainer: nodeContainer,
+    nodeShadow: nodeShadow,
+    grid: grid,
+    interactor: interactor,
     tool: null,
     gridVisible: true,
     gridSnap: true,
@@ -49,8 +63,8 @@ const page = {
     penetrateEnabled: false,
     multiselectEnabled: false,
     root: root,
-    nodes: [root],
-    components: [rootTransform],
+    baseNode: root,
+    mousePos: new Vec2(0, 0),
 
     setGridVisible(visible) {
         this.gridVisible = visible;
@@ -79,6 +93,65 @@ const page = {
         for (let i = 0; i < this.grid.height; i += this.gridSize.y) {
             ctx.fillRect(0, i, this.grid.width, 1);
         }
+    },
+    getSnappedPosition(x, y) {
+        let resultX;
+        let resultY;
+
+        if (this.gridSnap) {
+            const gridWidth = this.gridSize.x;
+            const gridHeight = this.gridSize.y;
+            resultX = Math.floor(x / gridWidth) * gridWidth;
+            resultY = Math.floor(y / gridHeight) * gridHeight;
+        } else {
+            resultX = x;
+            resultY = y;
+        }
+
+        this.mousePos.set(resultX, resultY);
+    },
+    pointerDownCreate(x, y) {
+        // 计算位置
+        this.getSnappedPosition(x, y);
+
+        // 插入节点树项
+        const treeItem = new NodeTreeItem("node");
+
+        this.root.treeItem.appendChild(treeItem);
+        this.root.treeItem.setExpanded(true);
+
+        // 插入游戏元素
+        const element = document.createElement("div");
+        element.style.position = "absolute";
+        element.style.transformOrigin = "16px 16px";
+        element.style.transform = `matrix(1, 0, 0, 1, ${this.mousePos.x}, ${this.mousePos.y})`;
+
+        element.style.width = "32px";
+        element.style.height = "32px";
+        element.style.backgroundImage = "url(\"block.png\")";
+
+        this.nodeContainer.appendChild(element);
+
+        // 创建节点
+        const node = {
+            id: SharkUid.create(),
+            parent: this.root,
+            children: [],
+            components: [
+                {
+                    id: SharkUid.create(),
+                    position: new Vec2(this.mousePos.x + 16, this.mousePos.y + 16)
+                }
+            ],
+            element: element,
+            treeItem: treeItem
+        };
+        this.root.children.push(node);
+    },
+    pointerMoveCreate(x, y) {
+        this.getSnappedPosition(x, y);
+        // 移动影子
+        this.nodeShadow.style.transform = `matrix(1, 0, 0, 1, ${this.mousePos.x}, ${this.mousePos.y})`;
     }
 };
 page.tool = new NodeEditToolCreate(page);
@@ -128,18 +201,20 @@ gridSize4.addEventListener("pointerup", e => {
     page.setGridSize(4, 4);
 });
 
-nodeContainer.style.flex = "1";
-nodeContainer.style.height = "100%";
-nodeContainer.style.backgroundColor = "#c0c0c0";
-const rootElement = document.createElement("div");
-nodeContainer.appendChild(rootElement);
-
-nodeContainer.addEventListener("pointerdown", e => {
+interactor.addEventListener("pointerdown", e => {
     page.tool.pointerDown(e);
 });
-nodeContainer.addEventListener("contextmenu", e => {
+interactor.addEventListener("pointermove", e => {
+    page.tool.pointerMove(e);
+});
+interactor.addEventListener("contextmenu", e => {
     e.preventDefault();
 });
+
+nodeShadow.style.width = "32px";
+nodeShadow.style.height = "32px";
+nodeShadow.style.backgroundImage = "url(\"block.png\")";
+nodeShadow.style.opacity = "0.5";
 
 const sceneObserver = new ResizeObserver(entries => {
     if (page.gridVisible) {
@@ -152,8 +227,5 @@ const sceneObserver = new ResizeObserver(entries => {
 sceneObserver.observe(scene);
 
 globalThis.exportGame = () => {
-    console.log(JSON.stringify({
-        nodes: page.nodes,
-        components: page.components,
-    }, null, 4));
+    console.log(JSON.stringify(page.root, null, 4));
 };

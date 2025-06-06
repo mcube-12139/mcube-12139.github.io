@@ -52,19 +52,47 @@ ol, ul {
     height: 100%;
 }
 
+.nodeTreeItem {
+    align-items: center;
+    font-family: Consolas, 'Courier New', monospace;
+}
+
+.nodeTreeItemIcon {
+    width: 16px;
+    height: 16px;
+}
+
+.nodeTreeChildren {
+    padding-left: 16px;
+}
+
 .scene {
     position: relative;
     overflow: hidden;
+    background-color: #c0c0c0;
 }
 
 .nodeContainer {
+    width: 100%;
     height: 100%;
-    background-color: #c0c0c0;
+}
+
+.nodeShadow {
+    position: absolute;
+    left: 0;
+    top: 0;
 }
 
 .gridCanvas {
     position: absolute;
     left: 0;
     top: 0;
-    pointer-events: none;
+}
+
+.interactor {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
 }
