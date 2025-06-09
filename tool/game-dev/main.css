@@ -39,12 +39,12 @@ ol, ul {
     border: 1px solid black;
 }
 
-.shortInput {
-    width: 4em;
+.fullHeight {
+    height: 100%;
 }
 
-#pageContainer {
-    height: 100%;
+.shortInput {
+    width: 4em;
 }
 
 .page {
@@ -52,17 +52,21 @@ ol, ul {
     height: 100%;
 }
 
-.nodeTreeItem {
+.treeItem {
     align-items: center;
     font-family: Consolas, 'Courier New', monospace;
 }
 
-.nodeTreeItemIcon {
+.treeItemIcon {
     width: 16px;
     height: 16px;
 }
 
-.nodeTreeChildren {
+.treeItemName {
+    cursor: pointer;
+}
+
+.treeItemChildren {
     padding-left: 16px;
 }
 

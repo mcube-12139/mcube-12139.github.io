@@ -1,24 +1,42 @@
-export class NodeTreeItem {
-    constructor(name) {
+export class TreeItem {
+    /**
+     * 
+     * @param {string | undefined} iconSrc 
+     * @param {string} name 
+     * @param {TreeItem[] | undefined} children 
+     */
+    constructor(iconSrc, name, children) {
         const element = document.createElement("li");
         element.className = "verticalLayout";
         
         const iconAndName = document.createElement("div");
-        iconAndName.className = "horizontalLayout nodeTreeItem";
+        iconAndName.className = "horizontalLayout treeItem";
         element.appendChild(iconAndName);
         
         const iconElement = document.createElement("img");
-        iconElement.className = "nodeTreeItemIcon";
-        iconElement.style.display = "none";
+        iconElement.className = "treeItemIcon";
+        if (iconSrc !== undefined) {
+            iconElement.src = iconSrc;
+        } else {
+            iconElement.style.display = "none";
+        }
         iconAndName.appendChild(iconElement);
         
         const nameElement = document.createElement("span");
+        nameElement.className = "treeItemName";
         nameElement.textContent = name;
         iconAndName.appendChild(nameElement);
         
         const childrenElement = document.createElement("ol");
-        childrenElement.className = "nodeTreeChildren";
+        childrenElement.className = "treeItemChildren";
         element.appendChild(childrenElement);
+        if (children !== undefined) {
+            iconElement.src = "image/chevron-down.svg";
+            iconElement.style.display = "inline";
+            for (const child of children) {
+                childrenElement.appendChild(child.element);
+            }
+        }
 
         this.element = element;
         this.iconElement = iconElement;
@@ -27,7 +45,7 @@ export class NodeTreeItem {
 
     /**
      * 
-     * @param {NodeTreeItem} child 
+     * @param {TreeItem} child 
      */
     appendChild(child) {
         this.iconElement.style.display = "inline";

@@ -2,9 +2,11 @@ import { NodeEditToolCreate } from "./NodeEditToolCreate.mjs";
 import { NodeEditToolDelete } from "./NodeEditToolDelete.mjs";
 import { NodeEditToolSelect } from "./NodeEditToolSelect.mjs";
 import { NodeEditToolSelectRegion } from "./NodeEditToolSelectRegion.mjs";
-import { NodeTreeItem } from "./NodeTreeItem.mjs";
+import { TreeItem } from "./TreeItem.mjs";
 import { SharkUid } from "./SharkUid.mjs";
 import { Vec2 } from "./math/Vec2.mjs";
+
+const resourceContainer = document.querySelector("#resourceContainer");
 
 const pageElement = document.querySelector("#page");
 const nodeTree = document.querySelector("#nodeTree");
@@ -26,6 +28,85 @@ const nodeShadow = document.querySelector("#nodeShadow");
 const grid = document.querySelector("#grid");
 const interactor = document.querySelector("#interactor");
 
+const rootResourceData = {
+    name: "root",
+    type: 0,
+    data: undefined,
+    children: [
+        {
+            name: "wall",
+            type: 1,
+            data: {
+                size: {
+                    x: 32,
+                    y: 32
+                },
+                origin: {
+                    x: 16,
+                    y: 16
+                },
+                image: "image/wall.png",
+            },
+            children: undefined
+        },
+        {
+            name: "miniWall",
+            type: 1,
+            data: {
+                size: {
+                    x: 16,
+                    y: 16
+                },
+                origin: {
+                    x: 8,
+                    y: 8
+                },
+                image: "image/miniWall.png"
+            },
+            children: undefined
+        }
+    ]
+};
+let selectedResource = undefined;
+let nowPage;
+const setSelectedResource = resource => {
+    selectedResource = resource;
+    nowPage.changeSelectedResource(resource);
+};
+
+// 创建资源树元素
+const createResource = data => {
+    const children = [];
+    let childTreeItems;
+    if (data.children !== undefined) {
+        childTreeItems = [];
+        for (const child of data.children) {
+            const childResource = createResource(child);
+            children.push(childResource);
+            childTreeItems.push(childResource.treeItem);
+        }
+    } else {
+        childTreeItems = undefined;
+    }
+    const treeItem = new TreeItem(undefined, data.name, childTreeItems);
+    const resource = {
+        name: data.name,
+        type: data.type,
+        data: data.data,
+        children: children,
+        treeItem: treeItem
+    };
+
+    treeItem.element.addEventListener("pointerdown", e => {
+        setSelectedResource(resource);
+        e.stopPropagation();
+    });
+
+    return resource;
+};
+const rootResource = createResource(rootResourceData);
+resourceContainer.appendChild(rootResource.treeItem.element);
+
 const rootElement = document.createElement("div");
 nodeContainer.appendChild(rootElement);
 
@@ -40,7 +121,7 @@ const root = {
         }
     ],
     element: rootElement,
-    treeItem: new NodeTreeItem("root")
+    treeItem: new TreeItem(undefined, "root", undefined)
 };
 nodeTree.appendChild(root.treeItem.element);
 
@@ -66,11 +147,22 @@ const page = {
     baseNode: root,
     mousePos: new Vec2(0, 0),
 
+    changeSelectedResource(resource) {
+        if (resource.type === 1) {
+            const data = resource.data;
+
+            nodeShadow.style.width = `${data.size.x}px`;
+            nodeShadow.style.height = `${data.size.y}px`;
+            nodeShadow.style.backgroundImage = `url("${data.image}")`;
+        } else {
+            nodeShadow.style.backgroundImage = "";
+        }
+    },
     setGridVisible(visible) {
         this.gridVisible = visible;
         this.grid.style.display = visible ? "block" : "none";
         if (visible) {
-            this.redrawGrid(this.scene.getBoundingClientRect());
+            this.redrawGrid();
         }
     },
     setGridSize(width, height) {
@@ -78,14 +170,17 @@ const page = {
         this.gridWidthElement.valueAsNumber = width;
         this.gridHeightElement.valueAsNumber = height;
         if (this.gridVisible) {
-            this.redrawGrid(this.scene.getBoundingClientRect());
+            this.redrawGrid();
         }
     },
-    redrawGrid(rect) {
+    resizeScene(rect) {
         this.grid.width = rect.width;
         this.grid.height = rect.height;
-    
+        this.redrawGrid();
+    },
+    redrawGrid() {
         const ctx = this.grid.getContext("2d");
+        ctx.clearRect(0, 0, this.grid.width, this.grid.height);
         ctx.fillStyle = "#0000007f";
         for (let i = 0; i < this.grid.width; i += this.gridSize.x) {
             ctx.fillRect(i, 0, 1, this.grid.height);
@@ -94,7 +189,7 @@ const page = {
             ctx.fillRect(0, i, this.grid.width, 1);
         }
     },
-    getSnappedPosition(x, y) {
+    setMousePos(x, y) {
         let resultX;
         let resultY;
 
@@ -111,50 +206,55 @@ const page = {
         this.mousePos.set(resultX, resultY);
     },
     pointerDownCreate(x, y) {
-        // 计算位置
-        this.getSnappedPosition(x, y);
+        console.log(selectedResource);
+        if (selectedResource !== undefined && selectedResource.type === 1) {
+            // 计算位置
+            this.setMousePos(x, y);
 
-        // 插入节点树项
-        const treeItem = new NodeTreeItem("node");
+            const data = selectedResource.data;
+            // 插入节点树项
+            const treeItem = new TreeItem(undefined, "node", undefined);
 
-        this.root.treeItem.appendChild(treeItem);
-        this.root.treeItem.setExpanded(true);
+            this.root.treeItem.appendChild(treeItem);
+            this.root.treeItem.setExpanded(true);
 
-        // 插入游戏元素
-        const element = document.createElement("div");
-        element.style.position = "absolute";
-        element.style.transformOrigin = "16px 16px";
-        element.style.transform = `matrix(1, 0, 0, 1, ${this.mousePos.x}, ${this.mousePos.y})`;
+            // 插入游戏元素
+            const element = document.createElement("div");
+            element.style.position = "absolute";
+            element.style.transformOrigin = `${data.origin.x}px ${data.origin.y}px`;
+            element.style.transform = `matrix(1, 0, 0, 1, ${this.mousePos.x}, ${this.mousePos.y})`;
 
-        element.style.width = "32px";
-        element.style.height = "32px";
-        element.style.backgroundImage = "url(\"block.png\")";
+            element.style.width = `${data.size.x}px`;
+            element.style.height = `${data.size.y}px`;
+            element.style.backgroundImage = `url("${data.image}")`;
 
-        this.nodeContainer.appendChild(element);
+            this.nodeContainer.appendChild(element);
 
-        // 创建节点
-        const node = {
-            id: SharkUid.create(),
-            parent: this.root,
-            children: [],
-            components: [
-                {
-                    id: SharkUid.create(),
-                    position: new Vec2(this.mousePos.x + 16, this.mousePos.y + 16)
-                }
-            ],
-            element: element,
-            treeItem: treeItem
-        };
-        this.root.children.push(node);
+            // 创建节点
+            const node = {
+                id: SharkUid.create(),
+                parent: this.root,
+                children: [],
+                components: [
+                    {
+                        id: SharkUid.create(),
+                        position: new Vec2(this.mousePos.x + 16, this.mousePos.y + 16)
+                    }
+                ],
+                element: element,
+                treeItem: treeItem
+            };
+            this.root.children.push(node);
+        }
     },
     pointerMoveCreate(x, y) {
-        this.getSnappedPosition(x, y);
+        this.setMousePos(x, y);
         // 移动影子
         this.nodeShadow.style.transform = `matrix(1, 0, 0, 1, ${this.mousePos.x}, ${this.mousePos.y})`;
     }
 };
 page.tool = new NodeEditToolCreate(page);
+nowPage = page;
 
 nodeEditToolCreate.addEventListener("change", e => {
     page.tool = new NodeEditToolCreate(page);
@@ -211,16 +311,13 @@ interactor.addEventListener("contextmenu", e => {
     e.preventDefault();
 });
 
-nodeShadow.style.width = "32px";
-nodeShadow.style.height = "32px";
-nodeShadow.style.backgroundImage = "url(\"block.png\")";
 nodeShadow.style.opacity = "0.5";
 
 const sceneObserver = new ResizeObserver(entries => {
     if (page.gridVisible) {
         for (const entry of entries) {
             const rect = entry.contentRect;
-            page.redrawGrid(rect);
+            page.resizeScene(rect);
         }
     }
 });
