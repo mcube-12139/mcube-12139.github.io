@@ -39,6 +39,7 @@ export class TreeItem {
         }
 
         this.element = element;
+        this.iconAndNameElement = iconAndName;
         this.iconElement = iconElement;
         this.childrenElement = childrenElement;
     }
@@ -63,6 +64,14 @@ export class TreeItem {
         } else {
             this.iconElement.src = "image/chevron-right.svg";
             this.childrenElement.style.display = "none";
+        }
+    }
+
+    setSelected(selected) {
+        if (selected) {
+            this.iconAndNameElement.classList.add("treeItemSelected");
+        } else {
+            this.iconAndNameElement.classList.remove("treeItemSelected");
         }
     }
 }

@@ -35,6 +35,10 @@ ol, ul {
     padding: 4px;
 }
 
+.scrollable {
+    overflow: auto;
+}
+
 .block {
     border: 1px solid black;
 }
@@ -55,6 +59,7 @@ ol, ul {
 .treeItem {
     align-items: center;
     font-family: Consolas, 'Courier New', monospace;
+    cursor: pointer;
 }
 
 .treeItemIcon {
@@ -62,12 +67,12 @@ ol, ul {
     height: 16px;
 }
 
-.treeItemName {
-    cursor: pointer;
-}
-
 .treeItemChildren {
     padding-left: 16px;
+}
+
+.treeItemSelected {
+    background-color: #bed3ff;
 }
 
 .scene {
@@ -83,6 +88,7 @@ ol, ul {
 
 .nodeShadow {
     position: absolute;
+    opacity: 0.5;
     left: 0;
     top: 0;
 }

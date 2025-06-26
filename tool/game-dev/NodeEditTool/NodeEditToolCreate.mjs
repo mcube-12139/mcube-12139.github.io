@@ -14,4 +14,8 @@ export class NodeEditToolCreate {
     pointerMove(event) {
         this.page.pointerMoveCreate(event.offsetX, event.offsetY);
     }
+
+    pointerUp(event) {
+        this.page.pointerUpCreate(event.offsetX, event.offsetY);
+    }
 }

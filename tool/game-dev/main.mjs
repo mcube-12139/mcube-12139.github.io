@@ -1,114 +1,229 @@
-import { NodeEditToolCreate } from "./NodeEditToolCreate.mjs";
-import { NodeEditToolDelete } from "./NodeEditToolDelete.mjs";
-import { NodeEditToolSelect } from "./NodeEditToolSelect.mjs";
-import { NodeEditToolSelectRegion } from "./NodeEditToolSelectRegion.mjs";
 import { TreeItem } from "./TreeItem.mjs";
-import { SharkUid } from "./SharkUid.mjs";
 import { Vec2 } from "./math/Vec2.mjs";
+import { NodeEditPage } from "./Page/NodeEditPage.mjs";
+import { ResourceType } from "./Resource/ResourceType.mjs";
+import { ComponentType } from "./Component/ComponentType.mjs";
+import { PropertyType } from "./Property/PropertyType.mjs";
+import { Component } from "./Component/Component.mjs";
+import { RootResource } from "./Resource/RootResource.mjs";
+import { ResourceTool } from "./Resource/ResourceTool.mjs";
 
 const resourceContainer = document.querySelector("#resourceContainer");
+const pageContainer = document.querySelector("#pageContainer");
 
-const pageElement = document.querySelector("#page");
-const nodeTree = document.querySelector("#nodeTree");
-const nodeEditToolCreate = document.querySelector("#nodeEditToolCreate");
-const nodeEditToolDelete = document.querySelector("#nodeEditToolDelete");
-const nodeEditToolSelect = document.querySelector("#nodeEditToolSelect");
-const nodeEditToolSelectRegion = document.querySelector("#nodeEditToolSelectRegion");
-const gridVisible = document.querySelector("#gridVisible");
-const gridSnap = document.querySelector("#gridSnap");
-const gridWidth = document.querySelector("#gridWidth");
-const gridHeight = document.querySelector("#gridHeight");
-const gridSize32 = document.querySelector("#gridSize32");
-const gridSize16 = document.querySelector("#gridSize16");
-const gridSize8 = document.querySelector("#gridSize8");
-const gridSize4 = document.querySelector("#gridSize4");
-const scene = document.querySelector("#scene");
-const nodeContainer = document.querySelector("#nodeContainer");
-const nodeShadow = document.querySelector("#nodeShadow");
-const grid = document.querySelector("#grid");
-const interactor = document.querySelector("#interactor");
-
-const rootResourceData = {
-    name: "root",
-    type: 0,
-    data: undefined,
-    children: [
-        {
-            name: "wall",
-            type: 1,
-            data: {
-                size: {
-                    x: 32,
-                    y: 32
-                },
-                origin: {
-                    x: 16,
-                    y: 16
-                },
-                image: "image/wall.png",
-            },
-            children: undefined
-        },
-        {
-            name: "miniWall",
-            type: 1,
-            data: {
-                size: {
-                    x: 16,
-                    y: 16
-                },
-                origin: {
-                    x: 8,
-                    y: 8
-                },
-                image: "image/miniWall.png"
-            },
-            children: undefined
+const resourcesData = [
+    {
+        id: 0,
+        type: ResourceType.ROOT,
+        parent: null,
+        previous: null,
+        next: null
+    },
+    {
+        id: 1,
+        type: ResourceType.SPRITE,
+        name: "wallSprite",
+        parent: 0,
+        previous: null,
+        next: 2
+    },
+    {
+        id: 2,
+        type: ResourceType.SPRITE,
+        name: "miniWallSprite",
+        parent: 0,
+        previous: 1,
+        next: 3
+    },
+    {
+        id: 3,
+        type: ResourceType.NODE,
+        name: "wall",
+        parent: 0,
+        previous: 2,
+        next: 4,
+        node: 0,
+        editOrigin: {
+            x: -16,
+            y: -16
         }
-    ]
-};
+    },
+    {
+        id: 4,
+        type: ResourceType.NODE,
+        name: "miniWall",
+        parent: 0,
+        previous: 3,
+        next: null,
+        node: 1,
+        editOrigin: {
+            x: -8,
+            y: -8
+        }
+    }
+];
+const nodesData = [
+    {
+        id: 0,
+        parent: null,
+        contentRect: {
+            x: -16,
+            y: -16,
+            z: 32,
+            w: 32
+        }
+    },
+    {
+        id: 1,
+        parent: null,
+        contentRect: {
+            x: -8,
+            y: -8,
+            z: 16,
+            w: 16
+        }
+    }
+];
+const componentsData = [
+    {
+        id: 0,
+        type: ComponentType.TRANSFORM,
+        node: 0,
+        prefab: null,
+        properties: [
+            {
+                key: "position",
+                type: PropertyType.VEC2,
+                modified: false,
+                value: {
+                    x: 0,
+                    y: 0
+                }
+            },
+            {
+                key: "scale",
+                type: PropertyType.VEC2,
+                modified: false,
+                value: {
+                    x: 1,
+                    y: 1
+                }
+            },
+            {
+                key: "rotation",
+                type: PropertyType.NUMBER,
+                modified: false,
+                value: 0
+            }
+        ]
+    },
+    {
+        id: 1,
+        type: ComponentType.SPRITE,
+        node: 0,
+        prefab: null,
+        properties: [
+            {
+                key: "resource",
+                type: PropertyType.SPRITE_RESOURCE,
+                modified: false,
+                value: 1
+            }
+        ]
+    },
+    {
+        id: 2,
+        type: ComponentType.TRANSFORM,
+        node: 1,
+        prefab: null,
+        properties: [
+            {
+                key: "position",
+                type: PropertyType.VEC2,
+                modified: false,
+                value: {
+                    x: 0,
+                    y: 0
+                }
+            },
+            {
+                key: "scale",
+                type: PropertyType.VEC2,
+                modified: false,
+                value: {
+                    x: 1,
+                    y: 1
+                }
+            },
+            {
+                key: "rotation",
+                type: PropertyType.NUMBER,
+                modified: false,
+                value: 0
+            }
+        ]
+    },
+    {
+        id: 3,
+        type: ComponentType.SPRITE,
+        node: 1,
+        prefab: null,
+        properties: [
+            {
+                key: "resource",
+                type: PropertyType.SPRITE_RESOURCE,
+                modified: false,
+                value: 2
+            }
+        ]
+    }
+];
 let selectedResource = undefined;
 let nowPage;
 const setSelectedResource = resource => {
+    if (selectedResource !== undefined) {
+        selectedResource.treeItem.setSelected(false);
+    }
     selectedResource = resource;
+    resource.treeItem.setSelected(true);
     nowPage.changeSelectedResource(resource);
 };
 
-// 创建资源树元素
-const createResource = data => {
-    const children = [];
-    let childTreeItems;
-    if (data.children !== undefined) {
-        childTreeItems = [];
-        for (const child of data.children) {
-            const childResource = createResource(child);
-            children.push(childResource);
-            childTreeItems.push(childResource.treeItem);
+// 创建资源对象
+let rootResource;
+const resourceMap = new Map();
+(function() {
+    const resourceDataMap = new Map();
+    for (const resourceData of resourcesData) {
+        resourceDataMap.set(resourceData.id, resourceData);
+        const resource = ResourceTool.fromData(resourceData);
+        resourceMap.set(resourceData.id, resource);
+
+        if (resourceData.parent === null) {
+            // 设置根资源
+            rootResource = resource;
         }
-    } else {
-        childTreeItems = undefined;
     }
-    const treeItem = new TreeItem(undefined, data.name, childTreeItems);
-    const resource = {
-        name: data.name,
-        type: data.type,
-        data: data.data,
-        children: children,
-        treeItem: treeItem
-    };
+    // 设置资源间关系
+    for (const resourceData of resourcesData) {
+        if (resourceData.parent !== null && resourceData.previous === null) {
+            const parent = resourceMap.get(resourceData.parent);
+            for (let data = resourceData; ; ) {
+                parent.appendChild(resourceMap.get(data.id));
+                if (data.next !== null) {
+                    data = resourceDataMap.get(data.next);
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+})();
 
-    treeItem.element.addEventListener("pointerdown", e => {
-        setSelectedResource(resource);
-        e.stopPropagation();
-    });
-
-    return resource;
-};
-const rootResource = createResource(rootResourceData);
+const componentMap = new Map();
 resourceContainer.appendChild(rootResource.treeItem.element);
 
 const rootElement = document.createElement("div");
-nodeContainer.appendChild(rootElement);
 
 const root = {
     id: "b6e1140f89b67245fb03f25c1d4132a7",
@@ -123,206 +238,26 @@ const root = {
     element: rootElement,
     treeItem: new TreeItem(undefined, "root", undefined)
 };
-nodeTree.appendChild(root.treeItem.element);
 
-const page = {
-    element: pageElement,
-    nodeTree: nodeTree,
-    scene: scene,
-    gridWidthElement: gridWidth,
-    gridHeightElement: gridHeight,
-    nodeContainer: nodeContainer,
-    nodeShadow: nodeShadow,
-    grid: grid,
-    interactor: interactor,
-    tool: null,
-    gridVisible: true,
-    gridSnap: true,
-    gridSize: new Vec2(32, 32),
-    gridColor: "#0000007f",
-    overlapEnabled: false,
-    penetrateEnabled: false,
-    multiselectEnabled: false,
-    root: root,
-    baseNode: root,
-    mousePos: new Vec2(0, 0),
-
-    changeSelectedResource(resource) {
-        if (resource.type === 1) {
-            const data = resource.data;
-
-            nodeShadow.style.width = `${data.size.x}px`;
-            nodeShadow.style.height = `${data.size.y}px`;
-            nodeShadow.style.backgroundImage = `url("${data.image}")`;
-        } else {
-            nodeShadow.style.backgroundImage = "";
-        }
-    },
-    setGridVisible(visible) {
-        this.gridVisible = visible;
-        this.grid.style.display = visible ? "block" : "none";
-        if (visible) {
-            this.redrawGrid();
-        }
-    },
-    setGridSize(width, height) {
-        this.gridSize.set(width, height);
-        this.gridWidthElement.valueAsNumber = width;
-        this.gridHeightElement.valueAsNumber = height;
-        if (this.gridVisible) {
-            this.redrawGrid();
-        }
-    },
-    resizeScene(rect) {
-        this.grid.width = rect.width;
-        this.grid.height = rect.height;
-        this.redrawGrid();
-    },
-    redrawGrid() {
-        const ctx = this.grid.getContext("2d");
-        ctx.clearRect(0, 0, this.grid.width, this.grid.height);
-        ctx.fillStyle = "#0000007f";
-        for (let i = 0; i < this.grid.width; i += this.gridSize.x) {
-            ctx.fillRect(i, 0, 1, this.grid.height);
-        }
-        for (let i = 0; i < this.grid.height; i += this.gridSize.y) {
-            ctx.fillRect(0, i, this.grid.width, 1);
-        }
-    },
-    setMousePos(x, y) {
-        let resultX;
-        let resultY;
-
-        if (this.gridSnap) {
-            const gridWidth = this.gridSize.x;
-            const gridHeight = this.gridSize.y;
-            resultX = Math.floor(x / gridWidth) * gridWidth;
-            resultY = Math.floor(y / gridHeight) * gridHeight;
-        } else {
-            resultX = x;
-            resultY = y;
-        }
-
-        this.mousePos.set(resultX, resultY);
-    },
-    pointerDownCreate(x, y) {
-        console.log(selectedResource);
-        if (selectedResource !== undefined && selectedResource.type === 1) {
-            // 计算位置
-            this.setMousePos(x, y);
-
-            const data = selectedResource.data;
-            // 插入节点树项
-            const treeItem = new TreeItem(undefined, "node", undefined);
-
-            this.root.treeItem.appendChild(treeItem);
-            this.root.treeItem.setExpanded(true);
-
-            // 插入游戏元素
-            const element = document.createElement("div");
-            element.style.position = "absolute";
-            element.style.transformOrigin = `${data.origin.x}px ${data.origin.y}px`;
-            element.style.transform = `matrix(1, 0, 0, 1, ${this.mousePos.x}, ${this.mousePos.y})`;
-
-            element.style.width = `${data.size.x}px`;
-            element.style.height = `${data.size.y}px`;
-            element.style.backgroundImage = `url("${data.image}")`;
-
-            this.nodeContainer.appendChild(element);
-
-            // 创建节点
-            const node = {
-                id: SharkUid.create(),
-                parent: this.root,
-                children: [],
-                components: [
-                    {
-                        id: SharkUid.create(),
-                        position: new Vec2(this.mousePos.x + 16, this.mousePos.y + 16)
-                    }
-                ],
-                element: element,
-                treeItem: treeItem
-            };
-            this.root.children.push(node);
-        }
-    },
-    pointerMoveCreate(x, y) {
-        this.setMousePos(x, y);
-        // 移动影子
-        this.nodeShadow.style.transform = `matrix(1, 0, 0, 1, ${this.mousePos.x}, ${this.mousePos.y})`;
-    }
-};
-page.tool = new NodeEditToolCreate(page);
+const page = new NodeEditPage(true, true, 32, 32, "#0000007f", root);
 nowPage = page;
-
-nodeEditToolCreate.addEventListener("change", e => {
-    page.tool = new NodeEditToolCreate(page);
-});
-nodeEditToolDelete.addEventListener("change", e => {
-    page.tool = new NodeEditToolDelete(page);
-});
-nodeEditToolSelect.addEventListener("change", e => {
-    page.tool = new NodeEditToolSelect(page);
-});
-nodeEditToolSelectRegion.addEventListener("change", e => {
-    page.tool = new NodeEditToolSelectRegion(page);
-});
-gridVisible.addEventListener("change", e => {
-    page.setGridVisible(gridVisible.checked);
-});
-gridSnap.addEventListener("change", e => {
-    page.gridSnap = gridSnap.checked;
-});
-gridWidth.addEventListener("change", e => {
-    if (gridWidth.valueAsNumber >= 2) {
-        page.setGridSize(gridWidth.valueAsNumber, page.gridSize.y);
-    } else {
-        gridWidth.valueAsNumber = page.gridSize.x;
-    }
-});
-gridHeight.addEventListener("change", e => {
-    if (gridHeight.valueAsNumber >= 2) {
-        page.setGridSize(page.gridSize.x, gridHeight.valueAsNumber);
-    } else {
-        gridHeight.valueAsNumber = page.gridSize.y;
-    }
-});
-gridSize32.addEventListener("pointerup", e => {
-    page.setGridSize(32, 32);
-});
-gridSize16.addEventListener("pointerup", e => {
-    page.setGridSize(16, 16);
-});
-gridSize8.addEventListener("pointerup", e => {
-    page.setGridSize(8, 8);
-});
-gridSize4.addEventListener("pointerup", e => {
-    page.setGridSize(4, 4);
-});
-
-interactor.addEventListener("pointerdown", e => {
-    page.tool.pointerDown(e);
-});
-interactor.addEventListener("pointermove", e => {
-    page.tool.pointerMove(e);
-});
-interactor.addEventListener("contextmenu", e => {
-    e.preventDefault();
-});
-
-nodeShadow.style.opacity = "0.5";
-
-const sceneObserver = new ResizeObserver(entries => {
-    if (page.gridVisible) {
-        for (const entry of entries) {
-            const rect = entry.contentRect;
-            page.resizeScene(rect);
-        }
-    }
-});
-sceneObserver.observe(scene);
+pageContainer.appendChild(page.element);
 
 globalThis.exportGame = () => {
     console.log(JSON.stringify(page.root, null, 4));
+};
+
+function getResource(id) {
+    return resourceMap.get(id);
+}
+
+function getComponent(id) {
+    return componentMap.get(id);
+}
+
+export {
+    selectedResource,
+    setSelectedResource,
+    getResource,
+    getComponent
 };
