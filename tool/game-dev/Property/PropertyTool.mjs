@@ -1,4 +1,3 @@
-import { getResource } from "../main.mjs";
 import { Vec2 } from "../math/Vec2.mjs";
 import { NumberProperty } from "./NumberProperty.mjs";
 import { PropertyType } from "./PropertyType.mjs";
@@ -14,7 +13,7 @@ export class PropertyTool {
         } else if (data.type === PropertyType.NUMBER) {
             result = new NumberProperty(data.modified, data.value);
         } else if (data.type === PropertyType.SPRITE_RESOURCE) {
-            result = new SpriteResourceProperty(data.modified, getResource(data.value));
+            result = new SpriteResourceProperty(data.modified, undefined);
         }
 
         return result;

@@ -1,6 +1,5 @@
 import { PropertyTool } from "../Property/PropertyTool.mjs";
 import { SharkUid } from "../SharkUid.mjs";
-import { getComponent } from "../main.mjs";
 
 export class Component {
     constructor(id, type, prefab, properties) {
@@ -13,20 +12,20 @@ export class Component {
     static fromData(data) {
         const properties = new Map();
         for (const property of data.properties) {
-            properties.set(property.key, PropertyTool.fromData(property.value));
+            properties.set(property.key, PropertyTool.fromData(property));
         }
 
         return new Component(
             data.id,
             data.type,
-            getComponent(data.prefab),
+            undefined,
             properties
         );
     }
 
     instantiate() {
         const properties = new Map();
-        for (const [key, value] of this.properties) {
+        for (const [key, value] of this.properties.entries()) {
             properties.set(key, value.instantiate());
         }
 
@@ -52,5 +51,9 @@ export class Component {
 
     setProperty(key, value) {
         this.properties.get(key).setValue(value);
+    }
+
+    setPropertyHacked(key, value) {
+        this.properties.get(key).value = value;
     }
 }

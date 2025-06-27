@@ -1,12 +1,11 @@
-import { TreeItem } from "./TreeItem.mjs";
-import { Vec2 } from "./math/Vec2.mjs";
 import { NodeEditPage } from "./Page/NodeEditPage.mjs";
 import { ResourceType } from "./Resource/ResourceType.mjs";
 import { ComponentType } from "./Component/ComponentType.mjs";
 import { PropertyType } from "./Property/PropertyType.mjs";
-import { Component } from "./Component/Component.mjs";
-import { RootResource } from "./Resource/RootResource.mjs";
 import { ResourceTool } from "./Resource/ResourceTool.mjs";
+import { Component } from "./Component/Component.mjs";
+import { GameNode } from "./GameNode.mjs";
+import { Vec4 } from "./math/Vec4.mjs";
 
 const resourceContainer = document.querySelector("#resourceContainer");
 const pageContainer = document.querySelector("#pageContainer");
@@ -25,7 +24,8 @@ const resourcesData = [
         name: "wallSprite",
         parent: 0,
         previous: null,
-        next: 2
+        next: 2,
+        source: "image/wall.png"
     },
     {
         id: 2,
@@ -33,7 +33,8 @@ const resourcesData = [
         name: "miniWallSprite",
         parent: 0,
         previous: 1,
-        next: 3
+        next: 3,
+        source: "image/miniWall.png"
     },
     {
         id: 3,
@@ -65,7 +66,11 @@ const resourcesData = [
 const nodesData = [
     {
         id: 0,
+        prefab: undefined,
+        name: "wall",
         parent: null,
+        previous: null,
+        next: 1,
         contentRect: {
             x: -16,
             y: -16,
@@ -75,7 +80,11 @@ const nodesData = [
     },
     {
         id: 1,
+        prefab: undefined,
+        name: "miniWall",
         parent: null,
+        previous: 0,
+        next: null,
         contentRect: {
             x: -8,
             y: -8,
@@ -89,6 +98,8 @@ const componentsData = [
         id: 0,
         type: ComponentType.TRANSFORM,
         node: 0,
+        previous: null,
+        next: 1,
         prefab: null,
         properties: [
             {
@@ -121,6 +132,8 @@ const componentsData = [
         id: 1,
         type: ComponentType.SPRITE,
         node: 0,
+        previous: 0,
+        next: null,
         prefab: null,
         properties: [
             {
@@ -135,6 +148,8 @@ const componentsData = [
         id: 2,
         type: ComponentType.TRANSFORM,
         node: 1,
+        previous: null,
+        next: 3,
         prefab: null,
         properties: [
             {
@@ -167,6 +182,8 @@ const componentsData = [
         id: 3,
         type: ComponentType.SPRITE,
         node: 1,
+        previous: 2,
+        next: null,
         prefab: null,
         properties: [
             {
@@ -189,10 +206,90 @@ const setSelectedResource = resource => {
     nowPage.changeSelectedResource(resource);
 };
 
+const selectNodeItem = node => {
+    nowPage.selectNodeItem(node);
+};
+
+let maxNodeId = -1;
+const nextNodeId = () => {
+    ++maxNodeId;
+    return maxNodeId;
+};
+
+// 创建组件对象，统计节点的组件
+const componentMap = new Map();
+const componentsOfNodeMap = new Map();
+(function () {
+    const componentDataMap = new Map();
+    for (const componentData of componentsData) {
+        componentDataMap.set(componentData.id, componentData);
+        componentMap.set(componentData.id, Component.fromData(componentData));
+    }
+
+    for (const componentData of componentsData) {
+        if (componentData.previous === null) {
+            componentsOfNodeMap.set(componentData.node, []);
+            for (let data = componentData; ; ) {
+                const component = componentMap.get(data.id);
+                componentsOfNodeMap.get(data.node).push(component);
+
+                if (data.next !== null) {
+                    data = componentDataMap.get(data.next);
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+})();
+
+// 创建节点对象
+const nodeMap = new Map();
+(function () {
+    const nodeDataMap = new Map();
+    for (const nodeData of nodesData) {
+        nodeDataMap.set(nodeData.id, nodeData);
+        const node = GameNode.fromData(nodeData);
+        nodeMap.set(nodeData.id, node);
+
+        // 添加组件
+        const components = componentsOfNodeMap.get(nodeData.id);
+        if (components !== undefined) {
+            for (const component of components) {
+                node.addComponent(component);
+            }
+        }
+
+        if (nodeData.id > maxNodeId) {
+            maxNodeId = nodeData.id;
+        }
+    }
+
+    for (const nodeData of nodesData) {
+        if (nodeData.prefab !== null) {
+            // 设置预设
+            nodeMap.get(nodeData.id).prefab = nodeMap.get(nodeData.prefab);
+        }
+
+        if (nodeData.parent !== null && nodeData.previous === null) {
+            const parent = nodeMap.get(nodeData.parent);
+            for (let data = nodeData; ; ) {
+                const node = nodeMap.get(data.id);
+                parent.appendChild(node);
+                if (data.next !== null) {
+                    data = nodeDataMap.get(data.next);
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+})(); 
+
 // 创建资源对象
 let rootResource;
 const resourceMap = new Map();
-(function() {
+(function () {
     const resourceDataMap = new Map();
     for (const resourceData of resourcesData) {
         resourceDataMap.set(resourceData.id, resourceData);
@@ -204,6 +301,7 @@ const resourceMap = new Map();
             rootResource = resource;
         }
     }
+
     // 设置资源间关系
     for (const resourceData of resourcesData) {
         if (resourceData.parent !== null && resourceData.previous === null) {
@@ -220,24 +318,26 @@ const resourceMap = new Map();
     }
 })();
 
-const componentMap = new Map();
-resourceContainer.appendChild(rootResource.treeItem.element);
-
-const rootElement = document.createElement("div");
-
-const root = {
-    id: "b6e1140f89b67245fb03f25c1d4132a7",
-    parent: undefined,
-    children: [],
-    components: [
-        {
-            id: "0eebb34ffeec15d19b4661d4c4642a45",
-            position: new Vec2(0, 0)
+// 设置不同类对象间引用
+for (const resourceData of resourcesData) {
+    if (resourceData.type === ResourceType.NODE) {
+        const resource = resourceMap.get(resourceData.id);
+        resource.node = nodeMap.get(resourceData.node);
+    }
+}
+for (const componentData of componentsData) {
+    for (const propertyData of componentData.properties) {
+        if (propertyData.type === PropertyType.SPRITE_RESOURCE) {
+            const component = componentMap.get(componentData.id);
+            const resource = resourceMap.get(propertyData.value);
+            component.setPropertyHacked(propertyData.key, resource);
         }
-    ],
-    element: rootElement,
-    treeItem: new TreeItem(undefined, "root", undefined)
-};
+    }
+}
+rootResource.getTreeItem().setExpanded(true);
+resourceContainer.appendChild(rootResource.getTreeItem().element);
+
+const root = new GameNode(0, undefined, "root", undefined, [], [], new Vec4(0, 0, 0, 0), undefined, undefined);
 
 const page = new NodeEditPage(true, true, 32, 32, "#0000007f", root);
 nowPage = page;
@@ -247,17 +347,9 @@ globalThis.exportGame = () => {
     console.log(JSON.stringify(page.root, null, 4));
 };
 
-function getResource(id) {
-    return resourceMap.get(id);
-}
-
-function getComponent(id) {
-    return componentMap.get(id);
-}
-
 export {
     selectedResource,
     setSelectedResource,
-    getResource,
-    getComponent
+    selectNodeItem,
+    nextNodeId
 };

@@ -1,17 +1,11 @@
-import { setSelectedResource } from "../main.mjs";
-import { TreeItem } from "../TreeItem.mjs";
+import { ResourceTool } from "./ResourceTool.mjs";
 import { ResourceType } from "./ResourceType.mjs";
 
 export class RootResource {
-    constructor(id, children) {
+    constructor(id, children, treeItem) {
         this.id = id;
         this.children = children;
-
-        this.treeItem = new TreeItem(undefined, "root", children.map(child => child.treeItem));
-        this.treeItem.element.addEventListener("pointerdown", e => {
-            setSelectedResource(this);
-            e.stopPropagation();
-        });
+        this.treeItem = treeItem;
     }
 
     get name() {
@@ -22,8 +16,16 @@ export class RootResource {
         return ResourceType.ROOT;
     }
 
+    getTreeItem() {
+        if (this.treeItem === undefined) {
+            this.treeItem = ResourceTool.createTreeItem(this, undefined, "root", this.children);
+        }
+
+        return this.treeItem;
+    }
+
     appendChild(resource) {
         this.children.push(resource);
-        this.treeItem.appendChild(resource.treeItem);
+        this.treeItem?.appendChild(resource.getTreeItem());
     }
 }

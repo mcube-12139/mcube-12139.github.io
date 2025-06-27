@@ -1,13 +1,12 @@
-import { GameNode } from "../GameNode.mjs";
 import { selectedResource } from "../main.mjs";
+import { MathTool } from "../math/MathTool.mjs";
 import { Vec2 } from "../math/Vec2.mjs";
 import { NodeEditToolCreate } from "../NodeEditTool/NodeEditToolCreate.mjs";
 import { NodeEditToolDelete } from "../NodeEditTool/NodeEditToolDelete.mjs";
 import { NodeEditToolSelect } from "../NodeEditTool/NodeEditToolSelect.mjs";
 import { NodeEditToolSelectRegion } from "../NodeEditTool/NodeEditToolSelectRegion.mjs";
+import { NodeItem } from "../NodeItem.mjs";
 import { ResourceType } from "../Resource/ResourceType.mjs";
-import { SharkUid } from "../SharkUid.mjs";
-import { TreeItem } from "../TreeItem.mjs";
 
 export class NodeEditPage {
     constructor(gridVisible, gridSnap, gridWidth, gridHeight, gridColor, root) {
@@ -300,8 +299,10 @@ export class NodeEditPage {
         });
         sceneObserver.observe(sceneElement);
 
-        nodeContainerElement.appendChild(root.element);
-        nodeTree.appendChild(root.treeItem.element);
+        const rootItem = root.createNodeItem();
+        nodeContainerElement.appendChild(rootItem.element);
+        nodeTree.appendChild(rootItem.treeItem.element);
+        rootItem.treeItem.setExpanded(true);
 
         this.element = element;
         this.nodeTree = nodeTree;
@@ -316,33 +317,42 @@ export class NodeEditPage {
         this.gridVisible = gridVisible;
         this.gridSnap = gridSnap;
         this.gridSize = new Vec2(gridWidth, gridHeight);
-        this.gridColor = "#0000007f";
+        this.gridColor = gridColor;
         this.overlapEnabled = false;
         this.penetrateEnabled = false;
         this.multiselectEnabled = false;
-        this.root = root;
+        this.root = rootItem;
         // 被创建节点的长节点
-        this.baseNode = root;
+        this.baseItem = rootItem;
         this.pointerHeld = false;
         this.mousePos = new Vec2(0, 0);
         this.lastMousePos = new Vec2(0, 0);
     }
 
     changeSelectedResource(resource) {
-        if (resource.type === 1) {
-            const data = resource.data;
+        if (resource.getType() === ResourceType.NODE) {
+            const node = resource.node;
 
-            this.nodeShadow.style.width = `${data.node.contentRect.z}px`;
-            this.nodeShadow.style.height = `${data.node.contentRect.w}px`;
-            this.nodeShadow.style.backgroundImage = `url("${GameNode.getImage(data.node.components)}")`;
+            this.nodeShadow.style.width = `${node.contentRect.z}px`;
+            this.nodeShadow.style.height = `${node.contentRect.w}px`;
+            this.nodeShadow.style.backgroundImage = `url("${node.getImage()}")`;
         } else {
             this.nodeShadow.style.backgroundImage = "";
         }
     }
 
+    selectNodeItem(item) {
+        if (!this.multiselectEnabled) {
+            this.baseItem.treeItem.setSelected(false);
+            item.treeItem.setSelected(true);
+
+            this.baseItem = item;
+        }
+    }
+
     setGridVisible(visible) {
         this.gridVisible = visible;
-        this.grid.style.display = visible ? "block" : "none";
+        this.grid.style.display = visible ? "" : "none";
         if (visible) {
             this.redrawGrid();
         }
@@ -370,8 +380,24 @@ export class NodeEditPage {
         for (let i = 0; i < this.grid.width; i += this.gridSize.x) {
             ctx.fillRect(i, 0, 1, this.grid.height);
         }
+
         for (let i = 0; i < this.grid.height; i += this.gridSize.y) {
             ctx.fillRect(0, i, this.grid.width, 1);
+        }
+
+        // 画坐标值
+        ctx.fillStyle = "#000000ff";
+        ctx.font = "12px Consolas";
+        ctx.textAlign = "left"
+        ctx.textBaseline = "top";
+        const unitWidth = this.gridSize.x * Math.floor(100 / this.gridSize.x);
+        for (let i = 0; i < this.grid.width; i += unitWidth) {
+            ctx.fillText(i.toString(), i + 2, 2);
+        }
+
+        const unitHeight = this.gridSize.y * Math.floor(100 / this.gridSize.y);
+        for (let i = unitHeight; i < this.grid.height; i += unitHeight) {
+            ctx.fillText(i.toString(), 2, i + 2);
         }
     }
     
@@ -393,43 +419,53 @@ export class NodeEditPage {
     }
 
     canCreateNode() {
-        if (selectedResource !== undefined && selectedResource.type === ResourceType.NODE) {
+        let result = true;
+
+        if (selectedResource !== undefined && selectedResource.getType() === ResourceType.NODE) {
             if (!this.overlapEnabled) {
                 // 不允许重叠，计算是否有重叠
-                const createdX = this.mousePos.x - selectedResource.data.node.contentRect.x;
-                const createdY = this.mousePos.y - selectedResource.data.node.contentRect.y;
-                const createdWidth = createdX + selectedResource.data.node.contentRect.z;
-                const createdHeight = createdY + selectedResource.data.node.contentRect.w;
+                const rect = selectedResource.node.getContentRect();
+                const createdX = this.mousePos.x + rect.x;
+                const createdY = this.mousePos.y + rect.y;
 
-                for (const child of this.baseNode.children) {
-                    /// TODO
+                for (const child of this.baseItem.node.children) {
+                    const childRect = child.getContentRect();
+                    if (
+                        createdX < childRect.x + childRect.z &&
+                        createdX + rect.z > childRect.x &&
+                        createdY < childRect.y + childRect.w &&
+                        createdY + rect.w > childRect.y
+                    ) {
+                        result = false;
+                        break;
+                    }
                 }
             }
+        } else {
+            result = false;
         }
 
-        return true;
+        return result;
     }
 
-    tryCreateNode() {
-        if (selectedResource !== undefined && selectedResource.type === ResourceType.NODE) {
-            const data = selectedResource.data;
+    createNode() {
+        const node = selectedResource.node;
 
-            // 创建节点
-            const node = GameNode.fromData(data.node);
-            node.setPosition(this.mousePos);
+        // 创建节点
+        const createdNode = node.instantiate();
+        const createdItem = createdNode.createNodeItem();
+        this.baseItem.appendChild(createdItem);
 
-            this.baseNode.treeItem.appendChild(node.treeItem);
-            this.nodeContainer.appendChild(node.element);
-            this.baseNode.treeItem.setExpanded(true);
-            this.baseNode.children.push(node);
-        }
+        createdItem.setPosition(this.mousePos);
     }
 
     pointerDownCreate(x, y) {
         this.pointerHeld = true;
         this.setMousePos(x, y);
         this.lastMousePos.setOther(this.mousePos);
-        this.tryCreateNode();
+        if (this.canCreateNode()) {
+            this.createNode();
+        }
     }
 
     pointerMoveCreate(x, y) {
@@ -441,7 +477,7 @@ export class NodeEditPage {
                 // 如果该位置能创建节点
                 if (this.pointerHeld && this.gridSnap) {
                     // 指针按着，可能需要创建节点
-                    this.tryCreateNode();
+                    this.createNode();
                 }
                 // 移动影子
                 this.nodeShadow.style.display = "";

@@ -1,80 +1,170 @@
 import { Component } from "./Component/Component.mjs";
 import { ComponentType } from "./Component/ComponentType.mjs";
-import { getResource } from "./main.mjs";
+import { nextNodeId } from "./main.mjs";
+import { MathTool } from "./math/MathTool.mjs";
 import { Vec4 } from "./math/Vec4.mjs";
-import { SharkUid } from "./SharkUid.mjs";
+import { NodeItem } from "./NodeItem.mjs";
 import { TreeItem } from "./TreeItem.mjs";
 
 export class GameNode {
-    constructor(id, parent, children, components,contentRect, element, treeItem) {
+    /**
+     * 
+     * @param {number} id 
+     * @param {GameNode | undefined} prefab 
+     * @param {string} name 
+     * @param {GameNode | undefined} parent 
+     * @param {GameNode[]} children 
+     * @param {Component[]} components 
+     * @param {Vec4} contentRect 
+     */
+    constructor(id, prefab, name, parent, children, components, contentRect) {
         this.id = id;
+        this.prefab = prefab;
+        this.name = name;
         this.parent = parent;
         this.children = children;
         this.components = components;
         this.contentRect = contentRect;
 
-        this.element = element;
-        this.treeItem = treeItem;
+        this.transform = undefined;
+        this.sprite = undefined;
     }
 
-    static getImage(componentsData) {
-        let result = "image/unknown.png";
+    static fromData(data) {
+        return new GameNode(
+            data.id,
+            undefined,
+            data.name,
+            undefined,
+            [],
+            [],
+            Vec4.fromData(data.contentRect)
+        );
+    }
 
-        for (const componentData of componentsData) {
-            if (componentData.type === ComponentType.SPRITE) {
-                for (const property of componentData.properties) {
-                    if (property.key === "resource") {
-                        result = getResource(property.value.value).data.source;
-                        break;
-                    }
-                }
+    instantiate() {
+        const children = [];
+        for (const child of this.children) {
+            children.push(child.instantiate());
+        }
+
+        const components = [];
+        for (const component of this.components) {
+            components.push(component.instantiate());
+        }
+
+        return new GameNode(
+            nextNodeId(),
+            this,
+            this.name,
+            undefined,
+            children,
+            components,
+            this.contentRect.clone()
+        );
+    }
+
+    getComponent(type) {
+        let result = undefined;
+
+        for (const component of this.components) {
+            if (component.type === type) {
+                result = component;
+                break;
             }
         }
 
         return result;
     }
 
-    static fromData(data) {
-        const children = [];
-        for (const childData of data.children) {
-            const child = this.fromData(childData);
-            children.push(child);
+    getTransform() {
+        if (this.transform === undefined) {
+            this.transform = this.getComponent(ComponentType.TRANSFORM);
         }
 
-        const components = [];
-        for (const componentData of data.components) {
-            components.push(Component.fromData(componentData));
+        return this.transform;
+    }
+
+    getSprite() {
+        if (this.sprite === undefined) {
+            this.sprite = this.getComponent(ComponentType.SPRITE);
         }
 
-        // 节点树项元素
-        const treeItem = new TreeItem(undefined, "node", undefined);
+        return this.sprite;
+    }
 
-        // 游戏元素
+    getImage() {
+        const resource = this.getSprite()?.getProperty("resource");
+
+        return resource?.source;
+    }
+
+    createElement() {
+        // 创建元素
         const element = document.createElement("div");
         element.style.position = "absolute";
-        element.style.transformOrigin = `${-data.contentRect.x}px ${-data.contentRect.y}px`;
+        element.style.transformOrigin = `${-this.contentRect.x}px ${-this.contentRect.y}px`;
 
-        element.style.width = `${data.contentRect.width}px`;
-        element.style.height = `${data.contentRect.height}px`;
-        element.style.backgroundImage = `url("${this.getImage(data.components)}")`;
+        const transform = this.getTransform();
+        if (transform !== undefined) {
+            const position = transform.getProperty("position");
+            const scale = transform.getProperty("scale");
 
-        return new GameNode(
-            SharkUid.create(),
-            undefined,
-            children,
-            components,
-            Vec4.fromData(data.contentRect),
-            element,
-            treeItem
-        );
+            element.style.transform = `scale(${scale.x}, ${scale.y}) rotate(${transform.getProperty("rotation")}deg) translate(${position.x}px, ${position.y}px)`;
+        }
+        
+        element.style.width = `${this.contentRect.z}px`;
+        element.style.height = `${this.contentRect.w}px`;
+
+        for (const child of this.children) {
+            element.appendChild(child.createElement());
+        }
+
+        return element;
+    }
+
+    createTreeItem() {
+        // 创建节点树元素
+        const treeItemChildren = [];
+        for (const child of this.children) {
+            treeItemChildren.push(child.createTreeItem());
+        }
+
+        const treeItem = new TreeItem(this.getImage(), this.name, treeItemChildren);
+
+        return treeItem;
+    }
+
+    createNodeItem() {
+        return new NodeItem(this, this.createElement(), this.createTreeItem());
+    }
+
+    appendChild(node) {
+        node.parent = this;
+        this.children.push(node);
+    }
+
+    addComponent(component) {
+        this.components.push(component);
     }
 
     setPosition(position) {
-        for (const component of components) {
-            if (component.type === ComponentType.TRANSFORM) {
-                component.setProperty("position", position);
-                break;
-            }
+        const transform = this.getTransform();
+        if (transform !== undefined) {
+            transform.setProperty("position", position);
         }
+    }
+
+    getContentRect() {
+        let result;
+
+        const transform = this.getTransform();
+        if (transform !== undefined) {
+            result = MathTool.transformRect(transform, this.contentRect);
+        } else {
+            result = this.contentRect;
+        }
+
+        return result;
     }
 }
