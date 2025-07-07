@@ -25,4 +25,8 @@ export class Vec2 {
     equals(other) {
         return this.x === other.x && this.y === other.y;
     }
+
+    add(other) {
+        return new Vec2(this.x + other.x, this.y + other.y);
+    }
 }

@@ -1,3 +1,4 @@
+import { GameNode } from "../GameNode.mjs";
 import { selectedResource } from "../main.mjs";
 import { MathTool } from "../math/MathTool.mjs";
 import { Vec2 } from "../math/Vec2.mjs";
@@ -227,9 +228,13 @@ export class NodeEditPage {
         element.appendChild(inspectorBlock);
 
         const inspectorTitle = document.createElement("div");
-        inspectorTitle.className = "container scrollable";
+        inspectorTitle.className = "container";
         inspectorTitle.textContent = "检查器";
         inspectorBlock.appendChild(inspectorTitle);
+
+        const inspectorContainer = document.createElement("div");
+        inspectorBlock.appendChild(inspectorContainer);
+        inspectorContainer.className = "scrollable";
         
         createRadio.addEventListener("change", e => {
             this.tool = new NodeEditToolCreate(this);
@@ -313,6 +318,7 @@ export class NodeEditPage {
         this.nodeShadow = nodeShadowElement;
         this.grid = gridCanvas;
         this.interactor = interactor;
+        this.inspectorContainer = inspectorContainer;
         this.tool = new NodeEditToolCreate(this);
         this.gridVisible = gridVisible;
         this.gridSnap = gridSnap;
@@ -345,6 +351,11 @@ export class NodeEditPage {
         if (!this.multiselectEnabled) {
             this.baseItem.treeItem.setSelected(false);
             item.treeItem.setSelected(true);
+            // 改变检查器
+            this.inspectorContainer.innerHTML = "";
+            for (const element of NodeItem.createInspectors([item])) {
+                this.inspectorContainer.appendChild(element);
+            }
 
             this.baseItem = item;
         }
@@ -425,8 +436,8 @@ export class NodeEditPage {
             if (!this.overlapEnabled) {
                 // 不允许重叠，计算是否有重叠
                 const rect = selectedResource.node.getContentRect();
-                const createdX = this.mousePos.x + rect.x;
-                const createdY = this.mousePos.y + rect.y;
+                const createdX = this.mousePos.x + selectedResource.editOrigin.x + rect.x;
+                const createdY = this.mousePos.y + selectedResource.editOrigin.y + rect.y;
 
                 for (const child of this.baseItem.node.children) {
                     const childRect = child.getContentRect();
@@ -456,7 +467,7 @@ export class NodeEditPage {
         const createdItem = createdNode.createNodeItem();
         this.baseItem.appendChild(createdItem);
 
-        createdItem.setPosition(this.mousePos);
+        createdItem.setPosition(this.mousePos.add(selectedResource.editOrigin));
     }
 
     pointerDownCreate(x, y) {

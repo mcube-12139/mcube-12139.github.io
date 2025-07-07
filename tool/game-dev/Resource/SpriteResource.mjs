@@ -2,10 +2,12 @@ import { ResourceTool } from "./ResourceTool.mjs";
 import { ResourceType } from "./ResourceType.mjs";
 
 export class SpriteResource {
-    constructor(id, name, source, treeItem) {
+    constructor(id, parent, name, source, size, treeItem) {
         this.id = id;
+        this.parent = parent;
         this.name = name;
         this.source = source;
+        this.size = size;
         this.treeItem = treeItem;
     }
 

@@ -1,11 +1,12 @@
 import { NodeEditPage } from "./Page/NodeEditPage.mjs";
 import { ResourceType } from "./Resource/ResourceType.mjs";
-import { ComponentType } from "./Component/ComponentType.mjs";
 import { PropertyType } from "./Property/PropertyType.mjs";
 import { ResourceTool } from "./Resource/ResourceTool.mjs";
 import { Component } from "./Component/Component.mjs";
 import { GameNode } from "./GameNode.mjs";
 import { Vec4 } from "./math/Vec4.mjs";
+import { ComponentClass } from "./Component/ComponentClass.mjs";
+import { IdManager } from "./IdManager.mjs";
 
 const resourceContainer = document.querySelector("#resourceContainer");
 const pageContainer = document.querySelector("#pageContainer");
@@ -25,7 +26,11 @@ const resourcesData = [
         parent: 0,
         previous: null,
         next: 2,
-        source: "image/wall.png"
+        source: "image/wall.png",
+        size: {
+            x: 32,
+            y: 32
+        }
     },
     {
         id: 2,
@@ -34,7 +39,11 @@ const resourcesData = [
         parent: 0,
         previous: 1,
         next: 3,
-        source: "image/miniWall.png"
+        source: "image/miniWall.png",
+        size: {
+            x: 16,
+            y: 16
+        }
     },
     {
         id: 3,
@@ -45,8 +54,8 @@ const resourcesData = [
         next: 4,
         node: 0,
         editOrigin: {
-            x: -16,
-            y: -16
+            x: 16,
+            y: 16
         }
     },
     {
@@ -58,8 +67,8 @@ const resourcesData = [
         next: null,
         node: 1,
         editOrigin: {
-            x: -8,
-            y: -8
+            x: 8,
+            y: 8
         }
     }
 ];
@@ -96,15 +105,13 @@ const nodesData = [
 const componentsData = [
     {
         id: 0,
-        type: ComponentType.TRANSFORM,
+        clazz: 0,
         node: 0,
         previous: null,
         next: 1,
         prefab: null,
         properties: [
             {
-                key: "position",
-                type: PropertyType.VEC2,
                 modified: false,
                 value: {
                     x: 0,
@@ -112,8 +119,6 @@ const componentsData = [
                 }
             },
             {
-                key: "scale",
-                type: PropertyType.VEC2,
                 modified: false,
                 value: {
                     x: 1,
@@ -121,8 +126,6 @@ const componentsData = [
                 }
             },
             {
-                key: "rotation",
-                type: PropertyType.NUMBER,
                 modified: false,
                 value: 0
             }
@@ -130,31 +133,34 @@ const componentsData = [
     },
     {
         id: 1,
-        type: ComponentType.SPRITE,
+        clazz: 1,
         node: 0,
         previous: 0,
         next: null,
         prefab: null,
         properties: [
             {
-                key: "resource",
-                type: PropertyType.SPRITE_RESOURCE,
                 modified: false,
                 value: 1
+            },
+            {
+                modified: false,
+                value: {
+                    x: 16,
+                    y: 16
+                }
             }
         ]
     },
     {
         id: 2,
-        type: ComponentType.TRANSFORM,
+        clazz: 0,
         node: 1,
         previous: null,
         next: 3,
         prefab: null,
         properties: [
             {
-                key: "position",
-                type: PropertyType.VEC2,
                 modified: false,
                 value: {
                     x: 0,
@@ -162,8 +168,6 @@ const componentsData = [
                 }
             },
             {
-                key: "scale",
-                type: PropertyType.VEC2,
                 modified: false,
                 value: {
                     x: 1,
@@ -171,8 +175,6 @@ const componentsData = [
                 }
             },
             {
-                key: "rotation",
-                type: PropertyType.NUMBER,
                 modified: false,
                 value: 0
             }
@@ -180,17 +182,62 @@ const componentsData = [
     },
     {
         id: 3,
-        type: ComponentType.SPRITE,
+        clazz: 1,
         node: 1,
         previous: 2,
         next: null,
         prefab: null,
         properties: [
             {
-                key: "resource",
-                type: PropertyType.SPRITE_RESOURCE,
                 modified: false,
                 value: 2
+            },
+            {
+                modified: false,
+                value: {
+                    x: 8,
+                    y: 8
+                }
+            }
+        ]
+    }
+];
+const componentClassesData = [
+    {
+        id: 0,
+        name: "Transform",
+        properties: [
+            {
+                name: "position",
+                type: PropertyType.VEC2,
+                xname: "x",
+                yname: "y"
+            },
+            {
+                name: "scale",
+                type: PropertyType.VEC2,
+                xname: "x",
+                yname: "y"
+            },
+            {
+                name: "rotation",
+                type: PropertyType.NUMBER
+            }
+        ]
+    },
+    {
+        id: 1,
+        name: "Sprite",
+        properties: [
+            {
+                name: "resource",
+                type: PropertyType.SPRITE_RESOURCE
+            },
+            {
+                name: "origin",
+                type: PropertyType.VEC2,
+                xname: "x",
+                yname: "y"
             }
         ]
     }
@@ -206,138 +253,175 @@ const setSelectedResource = resource => {
     nowPage.changeSelectedResource(resource);
 };
 
+let draggedResource = undefined;
+const setDraggedResource = resource => {
+    draggedResource = resource;
+};
+
 const selectNodeItem = node => {
     nowPage.selectNodeItem(node);
 };
 
 let maxNodeId = -1;
-const nextNodeId = () => {
-    ++maxNodeId;
-    return maxNodeId;
-};
+let maxComponentId = -1;
+let maxResourceId = -1;
+let maxComponentClassId = -1;
 
 // 创建组件对象，统计节点的组件
 const componentMap = new Map();
-const componentsOfNodeMap = new Map();
-(function () {
-    const componentDataMap = new Map();
-    for (const componentData of componentsData) {
-        componentDataMap.set(componentData.id, componentData);
-        componentMap.set(componentData.id, Component.fromData(componentData));
-    }
+const componentDataMap = new Map();
+for (const componentData of componentsData) {
+    componentDataMap.set(componentData.id, componentData);
+    componentMap.set(componentData.id, Component.fromData(componentData));
 
-    for (const componentData of componentsData) {
-        if (componentData.previous === null) {
-            componentsOfNodeMap.set(componentData.node, []);
-            for (let data = componentData; ; ) {
-                const component = componentMap.get(data.id);
-                componentsOfNodeMap.get(data.node).push(component);
-
-                if (data.next !== null) {
-                    data = componentDataMap.get(data.next);
-                } else {
-                    break;
-                }
-            }
-        }
+    if (componentData.id > maxComponentId) {
+        // 更新最大组件 id
+        maxComponentId = componentData.id;
     }
-})();
+}
 
 // 创建节点对象
 const nodeMap = new Map();
-(function () {
-    const nodeDataMap = new Map();
-    for (const nodeData of nodesData) {
-        nodeDataMap.set(nodeData.id, nodeData);
-        const node = GameNode.fromData(nodeData);
-        nodeMap.set(nodeData.id, node);
+const nodeDataMap = new Map();
+for (const nodeData of nodesData) {
+    nodeDataMap.set(nodeData.id, nodeData);
+    const node = GameNode.fromData(nodeData);
+    nodeMap.set(nodeData.id, node);
 
-        // 添加组件
-        const components = componentsOfNodeMap.get(nodeData.id);
-        if (components !== undefined) {
-            for (const component of components) {
-                node.addComponent(component);
-            }
-        }
-
-        if (nodeData.id > maxNodeId) {
-            maxNodeId = nodeData.id;
-        }
+    if (nodeData.id > maxNodeId) {
+        // 更新最大节点 id
+        maxNodeId = nodeData.id;
     }
-
-    for (const nodeData of nodesData) {
-        if (nodeData.prefab !== null) {
-            // 设置预设
-            nodeMap.get(nodeData.id).prefab = nodeMap.get(nodeData.prefab);
-        }
-
-        if (nodeData.parent !== null && nodeData.previous === null) {
-            const parent = nodeMap.get(nodeData.parent);
-            for (let data = nodeData; ; ) {
-                const node = nodeMap.get(data.id);
-                parent.appendChild(node);
-                if (data.next !== null) {
-                    data = nodeDataMap.get(data.next);
-                } else {
-                    break;
-                }
-            }
-        }
-    }
-})(); 
+}
 
 // 创建资源对象
 let rootResource;
 const resourceMap = new Map();
-(function () {
-    const resourceDataMap = new Map();
-    for (const resourceData of resourcesData) {
-        resourceDataMap.set(resourceData.id, resourceData);
-        const resource = ResourceTool.fromData(resourceData);
-        resourceMap.set(resourceData.id, resource);
+const resourceDataMap = new Map();
+for (const resourceData of resourcesData) {
+    resourceDataMap.set(resourceData.id, resourceData);
+    const resource = ResourceTool.fromData(resourceData);
+    resourceMap.set(resourceData.id, resource);
 
-        if (resourceData.parent === null) {
-            // 设置根资源
-            rootResource = resource;
-        }
+    if (resourceData.parent === null) {
+        // 设置根资源
+        rootResource = resource;
     }
+    if (resourceData.id > maxResourceId) {
+        // 更新最大 id
+        maxResourceId = resourceData.id;
+    }
+}
 
-    // 设置资源间关系
-    for (const resourceData of resourcesData) {
-        if (resourceData.parent !== null && resourceData.previous === null) {
-            const parent = resourceMap.get(resourceData.parent);
-            for (let data = resourceData; ; ) {
-                parent.appendChild(resourceMap.get(data.id));
-                if (data.next !== null) {
-                    data = resourceDataMap.get(data.next);
-                } else {
-                    break;
-                }
-            }
-        }
+// 创建组件类对象
+const componentClassMap = new Map();
+for (const componentClassData of componentClassesData) {
+    componentClassMap.set(componentClassData.id, ComponentClass.fromData(componentClassData));
+    if (componentClassData.id > maxComponentClassId) {
+        maxComponentClassId = componentClassData.id;
     }
-})();
+}
+
+const idManager = new IdManager(maxNodeId, maxComponentId, maxResourceId, maxComponentClassId);
 
 // 设置不同类对象间引用
+// 节点 -> 组件
+for (const componentData of componentsData) {
+    if (componentData.previous === null) {
+        const components = [];
+
+        for (let data = componentData; ; ) {
+            const component = componentMap.get(data.id);
+            components.push(component);
+
+            if (data.next !== null) {
+                data = componentDataMap.get(data.next);
+            } else {
+                break;
+            }
+        }
+
+        nodeMap.get(componentData.node).components = components;
+    }
+}
+
+// 节点 -> 节点(长节点), 节点(预设), 节点(子节点)
+for (const nodeData of nodesData) {
+    if (nodeData.prefab !== null) {
+        // 设置预设
+        nodeMap.get(nodeData.id).prefab = nodeMap.get(nodeData.prefab);
+    }
+
+    if (nodeData.parent !== null && nodeData.previous === null) {
+        const parent = nodeMap.get(nodeData.parent);
+        nodeMap.get(nodeData.id).parent = parent;
+
+        const children = [];
+        for (let data = nodeData; ; ) {
+            children.push(nodeMap.get(data.id));
+            if (data.next !== null) {
+                data = nodeDataMap.get(data.next);
+            } else {
+                break;
+            }
+        }
+        parent.children = children;
+    }
+}
+
+// 资源 -> 资源(长资源), 资源(子资源)
+for (const resourceData of resourcesData) {
+    if (resourceData.parent !== null && resourceData.previous === null) {
+        const parent = resourceMap.get(resourceData.parent);
+        resourceMap.get(resourceData.id).parent = parent;
+
+        const children = [];
+        for (let data = resourceData; ; ) {
+            children.push(resourceMap.get(data.id));
+            if (data.next !== null) {
+                data = resourceDataMap.get(data.next);
+            } else {
+                break;
+            }
+        }
+        parent.children = children;
+    }
+}
+
+// 节点资源 -> 节点
 for (const resourceData of resourcesData) {
     if (resourceData.type === ResourceType.NODE) {
         const resource = resourceMap.get(resourceData.id);
         resource.node = nodeMap.get(resourceData.node);
     }
 }
+
+// 组件 -> 组件类, 组件(预设)
 for (const componentData of componentsData) {
-    for (const propertyData of componentData.properties) {
-        if (propertyData.type === PropertyType.SPRITE_RESOURCE) {
-            const component = componentMap.get(componentData.id);
-            const resource = resourceMap.get(propertyData.value);
-            component.setPropertyHacked(propertyData.key, resource);
+    const component = componentMap.get(componentData.id);
+    const clazz = componentClassMap.get(componentData.clazz);
+    component.clazz = clazz;
+    component.prefab = componentMap.get(componentData.prefab);
+
+    // 由组件类读取属性
+    const properties = [];
+    for (const [i, propertyClass] of clazz.properties.entries()) {
+        const property = propertyClass.instanceFromData(componentData.properties[i]);
+
+        if (propertyClass.getType() === PropertyType.SPRITE_RESOURCE) {
+            const resource = resourceMap.get(componentData.properties[i].value);
+            property.value = resource;
         }
+
+        properties.push(property);
     }
+    component.properties = properties;
 }
+
 rootResource.getTreeItem().setExpanded(true);
 resourceContainer.appendChild(rootResource.getTreeItem().element);
 
-const root = new GameNode(0, undefined, "root", undefined, [], [], new Vec4(0, 0, 0, 0), undefined, undefined);
+const root = new GameNode(0, undefined, "root", undefined, [], [], new Vec4(0, 0, 0, 0));
 
 const page = new NodeEditPage(true, true, 32, 32, "#0000007f", root);
 nowPage = page;
@@ -350,6 +434,8 @@ globalThis.exportGame = () => {
 export {
     selectedResource,
     setSelectedResource,
+    draggedResource,
+    setDraggedResource,
     selectNodeItem,
-    nextNodeId
+    idManager
 };

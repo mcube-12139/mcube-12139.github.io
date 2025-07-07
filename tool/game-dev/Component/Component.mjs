@@ -1,59 +1,36 @@
-import { PropertyTool } from "../Property/PropertyTool.mjs";
-import { SharkUid } from "../SharkUid.mjs";
+import { idManager } from "../main.mjs";
 
 export class Component {
-    constructor(id, type, prefab, properties) {
+    constructor(id, clazz, prefab, properties) {
         this.id = id;
-        this.type = type;
+        this.clazz = clazz;
         this.prefab = prefab;
         this.properties = properties;
     }
 
     static fromData(data) {
-        const properties = new Map();
-        for (const property of data.properties) {
-            properties.set(property.key, PropertyTool.fromData(property));
-        }
-
         return new Component(
             data.id,
-            data.type,
             undefined,
-            properties
+            undefined,
+            undefined
         );
     }
 
     instantiate() {
-        const properties = new Map();
-        for (const [key, value] of this.properties.entries()) {
-            properties.set(key, value.instantiate());
-        }
-
         return new Component(
-            SharkUid.create(),
-            this.type,
+            idManager.nextComponentId(),
+            this.clazz,
             this,
-            properties
+            this.properties.map(property => property.instantiate())
         );
     }
 
-    getProperty(key) {
-        let result;
-
-        if (this.prefab === undefined || this.properties.get(key).modified) {
-            result = this.properties.get(key).value;
-        } else {
-            result = this.prefab.getProperty(key);
-        }
-
-        return result;
+    getProperty(index) {
+        return this.properties[index].value;
     }
 
-    setProperty(key, value) {
-        this.properties.get(key).setValue(value);
-    }
-
-    setPropertyHacked(key, value) {
-        this.properties.get(key).value = value;
+    setProperty(index, value) {
+        this.properties[index].setValue(value);
     }
 }

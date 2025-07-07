@@ -15,11 +15,11 @@ export class TreeItem {
         
         const chevronElement = document.createElement("img");
         iconAndName.appendChild(chevronElement);
-        chevronElement.className = "treeItemIcon";
+        chevronElement.className = "icon";
 
         const iconElement = document.createElement("img");
         iconAndName.appendChild(iconElement);
-        iconElement.className = "treeItemIcon";
+        iconElement.className = "icon";
         if (iconSrc !== undefined) {
             iconElement.src = iconSrc;
         } else {

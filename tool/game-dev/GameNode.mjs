@@ -1,6 +1,6 @@
 import { Component } from "./Component/Component.mjs";
-import { ComponentType } from "./Component/ComponentType.mjs";
-import { nextNodeId } from "./main.mjs";
+import { ComponentClass } from "./Component/ComponentClass.mjs";
+import { idManager } from "./main.mjs";
 import { MathTool } from "./math/MathTool.mjs";
 import { Vec4 } from "./math/Vec4.mjs";
 import { NodeItem } from "./NodeItem.mjs";
@@ -54,7 +54,7 @@ export class GameNode {
         }
 
         return new GameNode(
-            nextNodeId(),
+            idManager.nextNodeId(),
             this,
             this.name,
             undefined,
@@ -64,11 +64,11 @@ export class GameNode {
         );
     }
 
-    getComponent(type) {
+    getComponent(classId) {
         let result = undefined;
 
         for (const component of this.components) {
-            if (component.type === type) {
+            if (component.clazz.id === classId) {
                 result = component;
                 break;
             }
@@ -79,7 +79,7 @@ export class GameNode {
 
     getTransform() {
         if (this.transform === undefined) {
-            this.transform = this.getComponent(ComponentType.TRANSFORM);
+            this.transform = this.getComponent(ComponentClass.TRANSFORM);
         }
 
         return this.transform;
@@ -87,14 +87,14 @@ export class GameNode {
 
     getSprite() {
         if (this.sprite === undefined) {
-            this.sprite = this.getComponent(ComponentType.SPRITE);
+            this.sprite = this.getComponent(ComponentClass.SPRITE);
         }
 
         return this.sprite;
     }
 
     getImage() {
-        const resource = this.getSprite()?.getProperty("resource");
+        const resource = this.getSprite()?.getProperty(ComponentClass.SPRITE_RESOURCE);
 
         return resource?.source;
     }
@@ -103,18 +103,27 @@ export class GameNode {
         // 创建元素
         const element = document.createElement("div");
         element.style.position = "absolute";
-        element.style.transformOrigin = `${-this.contentRect.x}px ${-this.contentRect.y}px`;
+
+        const sprite = this.getSprite();
+        if (sprite !== undefined) {
+            // 设置精灵图像
+            const size = sprite.getProperty(ComponentClass.SPRITE_RESOURCE).size;
+            const origin = sprite.getProperty(ComponentClass.SPRITE_ORIGIN);
+
+            element.style.left = `${-origin.x}px`;
+            element.style.top = `${-origin.y}px`;
+            element.style.transformOrigin = `${origin.x}px ${origin.y}px`;
+            element.style.width = `${size.x}px`;
+            element.style.height = `${size.y}px`;
+        }
 
         const transform = this.getTransform();
         if (transform !== undefined) {
-            const position = transform.getProperty("position");
-            const scale = transform.getProperty("scale");
+            const position = transform.getProperty(ComponentClass.TRANSFORM_POSITION);
+            const scale = transform.getProperty(ComponentClass.TRANSFORM_SCALE);
 
-            element.style.transform = `scale(${scale.x}, ${scale.y}) rotate(${transform.getProperty("rotation")}deg) translate(${position.x}px, ${position.y}px)`;
+            element.style.transform = `translate(${position.x}px, ${position.y}px) rotate(${transform.getProperty(ComponentClass.TRANSFORM_ROTATION)}deg) scale(${scale.x}, ${scale.y})`;
         }
-        
-        element.style.width = `${this.contentRect.z}px`;
-        element.style.height = `${this.contentRect.w}px`;
 
         for (const child of this.children) {
             element.appendChild(child.createElement());
@@ -151,7 +160,14 @@ export class GameNode {
     setPosition(position) {
         const transform = this.getTransform();
         if (transform !== undefined) {
-            transform.setProperty("position", position);
+            transform.setProperty(ComponentClass.TRANSFORM_POSITION, position);
+        }
+    }
+
+    setRotation(rotation) {
+        const transform = this.getTransform();
+        if (transform !== undefined) {
+            transform.setProperty(ComponentClass.TRANSFORM_ROTATION, rotation);
         }
     }
 

@@ -7,14 +7,16 @@ import { ResourceType } from "./ResourceType.mjs";
 export class NodeResource {
     /**
      * 
-     * @param {string} id 
+     * @param {number} id 
+     * @param {object} parent
      * @param {string} name 
      * @param {GameNode | undefined} node 
      * @param {Vec2} editOrigin 
      * @param {TreeItem} treeItem
      */
-    constructor(id, name, node, editOrigin, treeItem) {
+    constructor(id, parent, name, node, editOrigin, treeItem) {
         this.id = id;
+        this.parent = parent;
         this.name = name;
         this.node = node;
         this.editOrigin = editOrigin;
